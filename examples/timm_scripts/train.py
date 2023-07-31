@@ -797,6 +797,7 @@ def main():
                 validate_loss_fn,
                 args,
                 amp_autocast=amp_autocast,
+                device=device,
             )
 
             if model_ema is not None and not args.model_ema_force_cpu:
@@ -1070,6 +1071,33 @@ def validate(
     metrics = OrderedDict([('loss', losses_m.avg), ('top1', top1_m.avg), ('top5', top5_m.avg)])
 
     return metrics
+
+
+# added functions to start script as a function call
+def _get_default_args():
+    args = parser.parse_args([])
+    return vars(args)
+
+
+def _update_args(**kwargs):
+    args_dict = _get_default_args()
+    args_dict.update(kwargs)
+    return args_dict
+
+
+def create_parser_with_args(**kwargs):
+    new_parser = argparse.ArgumentParser()
+    for key, value in kwargs.items():
+        key_dash = key.replace('_', '-')
+        new_parser.add_argument(f'--{key_dash}', default=value)
+    return new_parser
+
+
+def main_with_args(**kwargs):
+    global config_parser, parser
+    updated_args = _update_args(**kwargs)
+    parser = create_parser_with_args(**updated_args)
+    return main()
 
 
 if __name__ == '__main__':

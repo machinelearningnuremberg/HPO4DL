@@ -14,8 +14,10 @@ import hashlib
 import shutil
 import tempfile
 from timm.models import load_state_dict
+
 try:
     import safetensors.torch
+
     _has_safetensors = True
 except ImportError:
     _has_safetensors = False
@@ -53,12 +55,12 @@ def main():
 
 
 def clean_checkpoint(
-        checkpoint,
-        output,
-        use_ema=True,
-        no_hash=False,
-        clean_aux_bn=False,
-        safe_serialization: bool=False,
+    checkpoint,
+    output,
+    use_ema=True,
+    no_hash=False,
+    clean_aux_bn=False,
+    safe_serialization: bool = False,
 ):
     # Load an existing checkpoint to CPU, strip everything but the state_dict and re-save
     if checkpoint and os.path.isfile(checkpoint):

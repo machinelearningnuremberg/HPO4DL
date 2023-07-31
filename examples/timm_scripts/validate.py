@@ -30,6 +30,7 @@ from timm.utils import accuracy, AverageMeter, natural_key, setup_default_loggin
 
 try:
     from apex import amp
+
     has_apex = True
 except ImportError:
     has_apex = False
@@ -43,6 +44,7 @@ except AttributeError:
 
 try:
     from functorch.compile import memory_efficient_fusion
+
     has_functorch = True
 except ImportError as e:
     has_functorch = False
@@ -50,7 +52,6 @@ except ImportError as e:
 has_compile = hasattr(torch, 'compile')
 
 _logger = logging.getLogger('validate')
-
 
 parser = argparse.ArgumentParser(description='PyTorch ImageNet Validation')
 parser.add_argument('data', nargs='?', metavar='DIR', const=None,
@@ -66,7 +67,7 @@ parser.add_argument('--dataset-download', action='store_true', default=False,
 parser.add_argument('--model', '-m', metavar='NAME', default='dpn92',
                     help='model architecture (default: dpn92)')
 parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
-                    help='number of data loading workers (default: 4)')
+                    help='number of data loading workers (default: 2)')
 parser.add_argument('-b', '--batch-size', default=256, type=int,
                     metavar='N', help='mini-batch size (default: 256)')
 parser.add_argument('--img-size', default=None, type=int,
@@ -74,7 +75,8 @@ parser.add_argument('--img-size', default=None, type=int,
 parser.add_argument('--in-chans', type=int, default=None, metavar='N',
                     help='Image input channels (default: None => 3)')
 parser.add_argument('--input-size', default=None, nargs=3, type=int,
-                    metavar='N N N', help='Input all image dimensions (d h w, e.g. --input-size 3 224 224), uses model default if empty')
+                    metavar='N N N',
+                    help='Input all image dimensions (d h w, e.g. --input-size 3 224 224), uses model default if empty')
 parser.add_argument('--use-train-size', action='store_true', default=False,
                     help='force use of train input size, even when test size is specified in pretrained cfg')
 parser.add_argument('--crop-pct', default=None, type=float,
@@ -83,7 +85,7 @@ parser.add_argument('--crop-mode', default=None, type=str,
                     metavar='N', help='Input image crop mode (squash, border, center). Model default if None.')
 parser.add_argument('--mean', type=float, nargs='+', default=None, metavar='MEAN',
                     help='Override mean pixel value of dataset')
-parser.add_argument('--std', type=float,  nargs='+', default=None, metavar='STD',
+parser.add_argument('--std', type=float, nargs='+', default=None, metavar='STD',
                     help='Override std deviation of of dataset')
 parser.add_argument('--interpolation', default='', type=str, metavar='NAME',
                     help='Image resize interpolation type (overrides model)')
@@ -126,7 +128,6 @@ parser.add_argument('--fuser', default='', type=str,
 parser.add_argument('--fast-norm', default=False, action='store_true',
                     help='enable experimental fast-norm')
 parser.add_argument('--model-kwargs', nargs='*', default={}, action=ParseKwargs)
-
 
 scripting_group = parser.add_mutually_exclusive_group()
 scripting_group.add_argument('--torchscript', default=False, action='store_true',
@@ -357,7 +358,7 @@ def validate(args):
     )
 
     _logger.info(' * Acc@1 {:.3f} ({:.3f}) Acc@5 {:.3f} ({:.3f})'.format(
-       results['top1'], results['top1_err'], results['top5'], results['top5_err']))
+        results['top1'], results['top1_err'], results['top5'], results['top5_err']))
 
     return results
 
@@ -465,7 +466,6 @@ def write_results(results_file, results, format='csv'):
             for r in results:
                 dw.writerow(r)
             cf.flush()
-
 
 
 if __name__ == '__main__':
