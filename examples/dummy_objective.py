@@ -1,8 +1,8 @@
 import math
 import random
 from pathlib import Path
+from typing import List, Dict
 import numpy as np
-from typing import List, Dict, Union, Optional
 
 
 class DummyObjective:
@@ -38,6 +38,6 @@ class DummyObjective:
             DummyObjective.dummy_curves[checkpoint_path_str] = DummyObjective.get_random_curve()
 
         curve = DummyObjective.dummy_curves[checkpoint_path_str]
-        metric = curve[previous_epoch: epoch]
-        metric = list(metric)
+        curve_performance = curve[previous_epoch: epoch]
+        metric = [{'epoch': e, 'metric': p} for e, p in zip(range(previous_epoch + 1, epoch + 1), curve_performance)]
         return metric

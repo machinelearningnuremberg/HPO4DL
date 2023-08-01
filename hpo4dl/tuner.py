@@ -5,8 +5,10 @@ for a given objective function.
 
 import warnings
 import shutil
+import os
+from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Union, Callable
+from typing import Dict, List, Union, Callable, Literal, Optional
 import ConfigSpace as CS
 
 from hpo4dl.graybox_wrapper.abstract_graybox_wrapper import AbstractGrayBoxWrapper
@@ -15,6 +17,7 @@ from hpo4dl.graybox_wrapper.graybox_wrapper import GrayBoxWrapper
 from hpo4dl.configuration_manager.configuration_manager import ConfigurationManager
 from hpo4dl.optimizers.abstract_optimizer import AbstractOptimizer
 from hpo4dl.optimizers.hyperband.hyperband import HyperBand
+from hpo4dl.utils.result_logger import ResultLogger
 
 
 class Tuner:
@@ -29,9 +32,9 @@ class Tuner:
         objective_function: Callable[[Dict, int, int, Path], Union[List, int, float]],
         configuration_space: CS.ConfigurationSpace,
         max_epochs: int,
-        max_total_budget: int,
+        max_total_budget: Optional[int],
         result_path: Union[str, Path],
-        optimizer: Union[str, AbstractOptimizer] = 'hyperband',
+        optimizer: Literal["hyperband", "dyhpo"] = 'hyperband',
         minimize: bool = False,
         seed: int = None,
         device: str = None,
@@ -41,13 +44,14 @@ class Tuner:
         self.objective_function = objective_function
         self.configuration_space = configuration_space
         self.optimizer = optimizer
-        self.is_minimize = minimize
+        self.minimize = minimize
         self.optimizer_budget = max_total_budget
         self.max_epochs = max_epochs
         self.current_optimizer_budget = 0
         self.num_configurations = 0
         self.best_configuration_info = {}
         self.result_path = Path(result_path)
+        self.experiment_name = f'experiment_{datetime.now().strftime("%Y%m%d-%H%M%S")}'
 
         self.configuration_manager = ConfigurationManager(
             configuration_space=self.configuration_space,
@@ -55,23 +59,29 @@ class Tuner:
             seed=self.seed
         )
 
+        checkpoint_path = Path(os.path.expanduser('~/hpo4dl')) / self.experiment_name
         self.graybox_wrapper = GrayBoxWrapper(
+            checkpoint_path=checkpoint_path,
             objective_function=self.objective_function,
             configuration_manager=self.configuration_manager,
         )
 
-        if not isinstance(optimizer, str):
-            self.surrogate = optimizer
-        elif optimizer == 'hyperband':
+        if optimizer == 'hyperband':
             self.surrogate = HyperBand(
                 max_budget=self.max_epochs,
                 configuration_manager=self.configuration_manager,
                 seed=self.seed,
-                minimization=self.is_minimize,
+                minimize=self.minimize,
                 device=self.device,
             )
         else:
             raise ValueError(f"optimizer {optimizer} does not exist.")
+
+        result_logger_path = self.result_path / self.experiment_name
+        self.result_logger = ResultLogger(
+            path=result_logger_path,
+            minimize=self.minimize
+        )
 
     def run(self) -> Dict:
         """ Starts the optimization process.
@@ -85,25 +95,30 @@ class Tuner:
             if configuration_indices is None:
                 break
 
-            metric = self.graybox_wrapper.start_trial(
+            configuration_results = self.graybox_wrapper.start_trial(
                 configuration_id=configuration_indices,
                 epoch=fidelities
             )
 
-            self.surrogate.observe(
-                configuration_id=configuration_indices,
-                fidelity=fidelities,
-                metric=metric
-            )
+            self.result_logger.add_configuration_results(configuration_results=configuration_results)
+
+            self.surrogate.observe(configuration_results=configuration_results)
 
         best_configuration_id = self.surrogate.get_best_configuration_id()
         best_configuration = self.configuration_manager.get_configuration(configuration_id=best_configuration_id)
+
+        # move best model checkpoint to result path
         self.set_best_model_checkpoint(configuration_id=best_configuration_id)
 
-        self.surrogate.close()
-        self.graybox_wrapper.close()
+        self.close()
 
         return best_configuration
+
+    def close(self):
+        """ Close tuner.
+        """
+        self.result_logger.save_results()
+        self.graybox_wrapper.close()
 
     def set_best_model_checkpoint(self, configuration_id: int) -> None:
         """ Sets the checkpoint of the best model.

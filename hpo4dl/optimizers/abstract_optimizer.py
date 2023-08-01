@@ -2,7 +2,7 @@
 """
 
 from abc import ABC, abstractmethod
-from typing import List, Dict, Union, Optional, Tuple
+from typing import List, Dict, Optional, Tuple
 
 
 class AbstractOptimizer(ABC):
@@ -21,16 +21,12 @@ class AbstractOptimizer(ABC):
     @abstractmethod
     def observe(
         self,
-        configuration_id: List[int],
-        fidelity: List[int],
-        metric: List[Dict[str, Union[List, int, float, str]]]
+        configuration_results: List[Dict]
     ) -> None:
         """ Observes the results of the configuration and fidelity evaluation.
 
         Args:
-            configuration_id : List of configuration indices that were evaluated.
-            fidelity : List of fidelities that were used.
-            metric : Evaluation results for each configuration/fidelity pair.
+            configuration_results : List of results from configuration that were evaluated.
         """
 
     @abstractmethod
@@ -39,9 +35,4 @@ class AbstractOptimizer(ABC):
 
         Returns:
             int: ID of the best configuration.
-        """
-
-    @abstractmethod
-    def close(self):
-        """ Closes the optimizer.
         """

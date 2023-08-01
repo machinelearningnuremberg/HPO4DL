@@ -375,7 +375,8 @@ def _parse_args():
 
 
 def main():
-    utils.setup_default_logging()
+    if not logging.root.handlers:
+        utils.setup_default_logging()
     args, args_text = _parse_args()
 
     if torch.cuda.is_available():
@@ -759,10 +760,10 @@ def main():
         else:
             lr_scheduler.step(start_epoch)
 
-    if utils.is_primary(args):
-        _logger.info(
-            f'Scheduled epochs: {num_epochs}. LR stepped per {"epoch" if lr_scheduler.t_in_epochs else "update"}.')
-
+        if utils.is_primary(args):
+            _logger.info(
+                f'Scheduled epochs: {num_epochs}. LR stepped per {"epoch" if lr_scheduler.t_in_epochs else "update"}.')
+    eval_performances = []
     try:
         for epoch in range(start_epoch, num_epochs):
             if hasattr(dataset_train, 'set_epoch'):
@@ -831,15 +832,23 @@ def main():
                 save_metric = eval_metrics[eval_metric]
                 best_metric, best_epoch = saver.save_checkpoint(epoch, metric=save_metric)
 
+            eval_performances.append({
+                'epoch': epoch,
+                'metric': eval_metrics[eval_metric],
+            })
+
             if lr_scheduler is not None:
                 # step LR for next epoch
                 lr_scheduler.step(epoch + 1, eval_metrics[eval_metric])
+
 
     except KeyboardInterrupt:
         pass
 
     if best_metric is not None:
         _logger.info('*** Best metric: {0} (epoch {1})'.format(best_metric, best_epoch))
+
+    return eval_performances
 
 
 def train_one_epoch(

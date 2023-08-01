@@ -2,8 +2,7 @@
 """
 
 from pathlib import Path
-from typing import List, Dict, Union, Callable
-from datetime import datetime
+from typing import List, Dict, Callable
 import time
 import shutil
 
@@ -15,18 +14,23 @@ class GrayBoxWrapper(AbstractGrayBoxWrapper):
     """ Wraps and evaluate the objective function and manages checkpoints for each trial.
     """
 
-    def __init__(self, objective_function: Callable, configuration_manager: AbstractConfigurationManager):
+    def __init__(
+        self,
+        checkpoint_path: Path,
+        objective_function: Callable,
+        configuration_manager: AbstractConfigurationManager,
+    ):
         self.objective_function = objective_function
         self.configuration_manager = configuration_manager
+        self.checkpoint_path = checkpoint_path
         self.previous_fidelities = {}
         self.checkpoint_paths = {}
-        self.root_path = Path('../checkpoints') / f'experiment_{datetime.now().strftime("%Y%m%d-%H%M%S")}'
         self.trial_results = {}
 
     def start_trial(
         self, configuration_id: List[int],
         epoch: List[int]
-    ) -> List[Dict[str, Union[List, int, float, str]]]:
+    ) -> List[Dict]:
         """ Evaluate a batch of configurations.
 
         Args:
@@ -34,16 +38,16 @@ class GrayBoxWrapper(AbstractGrayBoxWrapper):
             epoch: The epochs to be evaluated.
 
         Returns:
-            List[Dict[str, Union[List, int, float, str]]]: Metrics for each configuration/epoch pair.
+            List[Dict]: Configuration results for all configuration/epoch pair.
         """
-        metrics = []
+        all_configuration_results = []
         for trial_config_id, trial_epoch in zip(configuration_id, epoch):
-            metric = self._run(configuration_id=trial_config_id, epoch=trial_epoch)
-            metrics.append(metric)
+            configuration_results = self._run(configuration_id=trial_config_id, epoch=trial_epoch)
+            all_configuration_results.extend(configuration_results)
 
-        return metrics
+        return all_configuration_results
 
-    def _run(self, configuration_id: int, epoch: int) -> Dict:
+    def _run(self, configuration_id: int, epoch: int) -> List[Dict]:
         """ Evaluate a configuration.
 
         Args:
@@ -51,7 +55,7 @@ class GrayBoxWrapper(AbstractGrayBoxWrapper):
             epoch: The epoch to be evaluated.
 
         Returns:
-            Dict: Metrics for the given configuration/epoch pair.
+            Dict: Configuration results for the given configuration/epoch pair.
         """
         if (configuration_id, epoch) in self.trial_results:
             return self.trial_results[(configuration_id, epoch)]
@@ -69,23 +73,44 @@ class GrayBoxWrapper(AbstractGrayBoxWrapper):
             previous_epoch = 0
 
         start_time = time.perf_counter()
-        metric = self.objective_function(
+        configuration_result = self.objective_function(
             configuration=configuration, epoch=epoch, previous_epoch=previous_epoch, checkpoint_path=checkpoint_path
         )
         end_time = time.perf_counter()
         execution_time = end_time - start_time
 
-        if not isinstance(metric, List):
-            metric = [metric]
+        if not isinstance(configuration_result, List):
+            configuration_result = [configuration_result]
 
-        metrics = {
-            'metric': metric,
-            'time': execution_time,
-        }
+        self.verify_configuration_results(configuration_result)
+
+        single_epoch_execution_time = execution_time / len(configuration_result)
+
+        configuration_results = []
+        for entry in configuration_result:
+            configuration_results.append({
+                **entry,
+                'configuration_id': configuration_id,
+                'configuration': configuration,
+                'time': single_epoch_execution_time,
+            })
+
         self.previous_fidelities[configuration_id] = epoch
-        self.trial_results[(configuration_id, epoch)] = metrics
+        self.trial_results[(configuration_id, epoch)] = configuration_results
 
-        return metrics
+        return configuration_results
+
+    def verify_configuration_results(self, configuration_result: List[Dict]):
+        """ Verify that configuration results have epoch and metric entries.
+
+        Args:
+            configuration_result: Evaluated configuration results.
+        """
+        for entry in configuration_result:
+            if "epoch" not in entry:
+                raise ValueError("epoch entry missing from objective function results.")
+            if "metric" not in entry:
+                raise ValueError("metric entry missing from objective function results.")
 
     def get_checkpoint_path(self, configuration_id: int) -> Path:
         """ Gets the checkpoint path for the given configuration.
@@ -96,10 +121,10 @@ class GrayBoxWrapper(AbstractGrayBoxWrapper):
         Returns:
             Path: The checkpoint path.
         """
-        return self.root_path / f'trial_{configuration_id}' / 'last.pth.tar'
+        return self.checkpoint_path / f'trial_{configuration_id}' / 'last.pth.tar'
 
     def close(self) -> None:
         """ Closes the wrapper and cleans up the checkpoint directory.
         """
-        if self.root_path.exists():
-            shutil.rmtree(self.root_path)
+        if self.checkpoint_path.exists():
+            shutil.rmtree(self.checkpoint_path)
