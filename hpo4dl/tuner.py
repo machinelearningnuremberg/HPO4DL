@@ -50,8 +50,8 @@ class Tuner:
         self.current_optimizer_budget = 0
         self.num_configurations = 0
         self.best_configuration_info = {}
-        self.result_path = Path(result_path)
         self.experiment_name = f'experiment_{datetime.now().strftime("%Y%m%d-%H%M%S")}'
+        self.result_path = Path(result_path) / self.experiment_name
 
         self.configuration_manager = ConfigurationManager(
             configuration_space=self.configuration_space,
@@ -77,9 +77,8 @@ class Tuner:
         else:
             raise ValueError(f"optimizer {optimizer} does not exist.")
 
-        result_logger_path = self.result_path / self.experiment_name
         self.result_logger = ResultLogger(
-            path=result_logger_path,
+            path=self.result_path,
             minimize=self.minimize
         )
 
@@ -129,6 +128,7 @@ class Tuner:
         """
         checkpoint_path = self.graybox_wrapper.get_checkpoint_path(configuration_id=configuration_id)
         if checkpoint_path.exists():
-            shutil.copy2(checkpoint_path, self.result_path)
+            destination_file_path = self.result_path / 'best_checkpoint'
+            shutil.copy2(checkpoint_path, destination_file_path)
         else:
             warnings.warn("Best model checkpoint does not exist.", RuntimeWarning)

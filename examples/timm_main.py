@@ -25,7 +25,7 @@ def main():
         max_total_budget=None,
         optimizer='hyperband',
         seed=seed,
-        max_epochs=81,
+        max_epochs=27,
         result_path='./hpo4dl_results',
     )
     best_config = tuner.run()
