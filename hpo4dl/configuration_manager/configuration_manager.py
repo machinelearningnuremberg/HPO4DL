@@ -26,10 +26,15 @@ class ConfigurationManager(AbstractConfigurationManager):
         self.configurations: List[Dict] = []
         self.configurations_set: Set[Tuple] = set()
         self.configurations_df: pd.DataFrame = pd.DataFrame()
+        self.log_indicator = []
+        self.all_unique_configurations_added = False
+
+        self.configuration_names = [hp.name for hp in self.configuration_space.get_hyperparameters()]
 
         if self.seed is not None:
             self.configuration_space.seed(self.seed)
 
+        self.generate_log_indicator()
         self.add_configurations(num_configurations=self.num_configurations)
 
     def get_configurations(self) -> pd.DataFrame:
@@ -70,17 +75,26 @@ class ConfigurationManager(AbstractConfigurationManager):
             configurations = self.generate_configurations(num_configurations=num_configurations_to_fill)
             for config in configurations:
                 config_tuple = tuple(sorted(config.items()))
-                if config_tuple not in self.configurations_set:
+                if config_tuple not in self.configurations_set or self.all_unique_configurations_added:
                     self.configurations.append(config)
                     self.configurations_set.add(config_tuple)
                     num_added += 1
             num_tries += 1
         self.configurations_df = pd.DataFrame(self.configurations)
+        self.configurations_df = self.configurations_df[self.configuration_names]
 
         if num_tries == max_try_limit:
-            warnings.warn(
-                f'Unable to add {num_configurations} unique configurations, '
-                f'only {num_added} could be added due to duplicates.'
-            )
+            self.all_unique_configurations_added = True
+            self.add_configurations(num_configurations - num_added)
 
-        return num_added
+    def generate_log_indicator(self):
+        log_indicator = {}
+        for hp in self.configuration_space.get_hyperparameters():
+            if hasattr(hp, 'log'):
+                log_indicator[hp.name] = hp.log
+            else:
+                log_indicator[hp.name] = False
+        self.log_indicator = [log_indicator[k] for k in self.configuration_names]
+
+    def get_log_indicator(self):
+        return self.log_indicator

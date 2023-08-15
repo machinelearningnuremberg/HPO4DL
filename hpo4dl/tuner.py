@@ -17,6 +17,7 @@ from hpo4dl.graybox_wrapper.graybox_wrapper import GrayBoxWrapper
 from hpo4dl.configuration_manager.configuration_manager import ConfigurationManager
 from hpo4dl.optimizers.abstract_optimizer import AbstractOptimizer
 from hpo4dl.optimizers.hyperband.hyperband import HyperBand
+from hpo4dl.optimizers.dyhpo.dyhpo_optimizer import DyHPOOptimizer
 from hpo4dl.utils.result_logger import ResultLogger
 
 
@@ -74,6 +75,16 @@ class Tuner:
                 minimize=self.minimize,
                 device=self.device,
             )
+        elif optimizer == 'dyhpo':
+            self.surrogate = DyHPOOptimizer(
+                max_epochs=self.max_epochs,
+                total_budget=self.optimizer_budget,
+                configuration_manager=self.configuration_manager,
+                seed=self.seed,
+                minimization=self.minimize,
+                device=self.device,
+                output_path=str(self.result_path),
+            )
         else:
             raise ValueError(f"optimizer {optimizer} does not exist.")
 
@@ -98,7 +109,6 @@ class Tuner:
                 configuration_id=configuration_indices,
                 epoch=fidelities
             )
-
             self.result_logger.add_configuration_results(configuration_results=configuration_results)
 
             self.surrogate.observe(configuration_results=configuration_results)
@@ -127,8 +137,9 @@ class Tuner:
 
         """
         checkpoint_path = self.graybox_wrapper.get_checkpoint_path(configuration_id=configuration_id)
+        checkpoint_path = checkpoint_path.parent
         if checkpoint_path.exists():
-            destination_file_path = self.result_path / 'best_checkpoint'
-            shutil.copy2(checkpoint_path, destination_file_path)
+            destination_file_path = self.result_path / 'checkpoints'
+            shutil.copytree(checkpoint_path, destination_file_path)
         else:
             warnings.warn("Best model checkpoint does not exist.", RuntimeWarning)

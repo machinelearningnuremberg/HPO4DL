@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import List, Dict, Callable
 import time
 import shutil
+import logging
 
 from hpo4dl.graybox_wrapper.abstract_graybox_wrapper import AbstractGrayBoxWrapper
 from hpo4dl.configuration_manager.abstract_configuration_manager import AbstractConfigurationManager
@@ -24,7 +25,6 @@ class GrayBoxWrapper(AbstractGrayBoxWrapper):
         self.configuration_manager = configuration_manager
         self.checkpoint_path = checkpoint_path
         self.previous_fidelities = {}
-        self.checkpoint_paths = {}
         self.trial_results = {}
 
     def start_trial(
@@ -62,10 +62,8 @@ class GrayBoxWrapper(AbstractGrayBoxWrapper):
 
         configuration = self.configuration_manager.get_configuration(configuration_id=configuration_id)
 
-        if configuration_id in self.checkpoint_paths:
-            checkpoint_path = self.checkpoint_paths[configuration_id]
-        else:
-            checkpoint_path = self.get_checkpoint_path(configuration_id)
+        checkpoint_path = self.get_checkpoint_path(configuration_id)
+        checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
 
         if configuration_id in self.previous_fidelities:
             previous_epoch = self.previous_fidelities[configuration_id]
@@ -88,12 +86,13 @@ class GrayBoxWrapper(AbstractGrayBoxWrapper):
 
         configuration_results = []
         for entry in configuration_result:
-            configuration_results.append({
+            configuration_result = {
                 **entry,
                 'configuration_id': configuration_id,
                 'configuration': configuration,
                 'time': single_epoch_execution_time,
-            })
+            }
+            configuration_results.append(configuration_result)
 
         self.previous_fidelities[configuration_id] = epoch
         self.trial_results[(configuration_id, epoch)] = configuration_results
