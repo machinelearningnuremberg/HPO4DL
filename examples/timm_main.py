@@ -35,8 +35,8 @@ def main():
         max_epochs=27,
         result_path='./hpo4dl_results',
     )
-    best_config = tuner.run()
-    print("Best Configuration", best_config)
+    best_configuration = tuner.run()
+    print("Best Configuration Info", best_configuration)
 
 
 if __name__ == "__main__":

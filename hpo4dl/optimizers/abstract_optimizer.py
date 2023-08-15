@@ -28,11 +28,3 @@ class AbstractOptimizer(ABC):
         Args:
             configuration_results : List of results from configuration that were evaluated.
         """
-
-    @abstractmethod
-    def get_best_configuration_id(self) -> int:
-        """ Gets the index of the best configuration seen so far.
-
-        Returns:
-            int: ID of the best configuration.
-        """

@@ -72,7 +72,6 @@ class HyperBand(AbstractOptimizer):
         self.num_configurations: int = int(np.sum(self.bracket_num_configs))
         self.configuration_manager.add_configurations(num_configurations=self.num_configurations)
 
-        self.history: pd.DataFrame = pd.DataFrame()
         self.bracket_history: pd.DataFrame = pd.DataFrame()
 
         self.current_bracket_level: int = 0
@@ -128,7 +127,6 @@ class HyperBand(AbstractOptimizer):
         """
         new_configuration_results = pd.DataFrame(configuration_results)
         self.bracket_history = pd.concat([self.bracket_history, new_configuration_results], axis=0, ignore_index=True)
-        self.history = pd.concat([self.history, new_configuration_results], axis=0, ignore_index=True)
 
         current_num_promotions = self.sh_num_promotions[self.current_bracket_level][self.current_rung_level]
         self.bracket_configuration_ids = self.get_top_k_configuration_id(
@@ -152,12 +150,3 @@ class HyperBand(AbstractOptimizer):
                 start_id = np.sum(self.bracket_num_configs[:self.current_bracket_level])
                 end_id = start_id + self.bracket_num_configs[self.current_bracket_level]
                 self.bracket_configuration_ids = list(range(start_id, end_id))
-
-    def get_best_configuration_id(self) -> int:
-        """ Gets the index of the best configuration seen so far.
-
-        Returns:
-            int: ID of the best configuration.
-        """
-        best_configuration_id = self.get_top_k_configuration_id(data=self.history, k=1)
-        return best_configuration_id[0]

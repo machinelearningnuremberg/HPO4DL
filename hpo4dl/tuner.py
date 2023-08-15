@@ -113,15 +113,14 @@ class Tuner:
 
             self.surrogate.observe(configuration_results=configuration_results)
 
-        best_configuration_id = self.surrogate.get_best_configuration_id()
-        best_configuration = self.configuration_manager.get_configuration(configuration_id=best_configuration_id)
+        best_configuration_info = self.result_logger.get_best_configuration()
 
         # move best model checkpoint to result path
-        self.set_best_model_checkpoint(configuration_id=best_configuration_id)
+        self.set_best_model_checkpoint(configuration_id=best_configuration_info["configuration_id"])
 
         self.close()
 
-        return best_configuration
+        return best_configuration_info
 
     def close(self):
         """ Close tuner.

@@ -833,7 +833,7 @@ def main():
                 best_metric, best_epoch = saver.save_checkpoint(epoch, metric=save_metric)
 
             eval_performances.append({
-                'epoch': epoch,
+                'epoch': epoch + 1,
                 'metric': eval_metrics[eval_metric],
             })
 

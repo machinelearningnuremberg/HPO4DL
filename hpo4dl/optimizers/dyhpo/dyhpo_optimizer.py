@@ -90,20 +90,20 @@ class DyHPOOptimizer(AbstractOptimizer):
 
         self.minimization = minimization
         self.seed = seed
-        self.history: pd.DataFrame = pd.DataFrame()
 
         if verbose:
             logging_level = logging.DEBUG
         else:
             logging_level = logging.INFO
         self.logger = logging.getLogger('dyhpo')
-
         Path(output_path).mkdir(parents=True, exist_ok=True)
-        logging.basicConfig(
-            format='%(levelname)s:%(asctime)s:%(message)s',
-            filename=os.path.join(output_path, f'dyhpo_surrogate_{dataset_name}_{seed}.log'),
-            level=logging_level,
-        )
+        self.logger.propagate = False
+        self.logger.setLevel(logging_level)
+
+        file_handler = logging.FileHandler(os.path.join(output_path, f'dyhpo_surrogate_{dataset_name}_{seed}.log'))
+        file_formatter = logging.Formatter('%(levelname)s:%(asctime)s:%(message)s')
+        file_handler.setFormatter(file_formatter)
+        self.logger.addHandler(file_handler)
 
         # the keys will be hyperparameter indices while the value
         # will be a list with all the budgets evaluated for examples
@@ -333,8 +333,6 @@ class DyHPOOptimizer(AbstractOptimizer):
             alg_time: The time taken from the algorithm to evaluate the hp configuration.
         """
         assert len(configuration_results) == 1, "Dyhpo only support observe calls with only one observation."
-        new_configuration_results = pd.DataFrame(configuration_results)
-        self.history = pd.concat([self.history, new_configuration_results], axis=0, ignore_index=True)
 
         hp_index = configuration_results[0]['configuration_id']
         b = configuration_results[0]['epoch']
@@ -717,32 +715,3 @@ class DyHPOOptimizer(AbstractOptimizer):
                 curve.extend([0.0] * difference)
 
         return curves
-
-    def get_best_configuration_id(self) -> int:
-        """ Gets the index of the best configuration seen so far.
-
-        Returns:
-            int: ID of the best configuration.
-        """
-        best_configuration_id = self.get_top_k_configuration_id(data=self.history, k=1)
-        return best_configuration_id[0]
-
-    def get_top_k_configuration_id(self, data: pd.DataFrame, k: int) -> List[int]:
-        """ Returns the top 'k' configuration IDs based on the performance.
-
-        Args:
-            data (pd.DataFrame): A pandas DataFrame containing the performance data. The DataFrame
-                should have 'configuration_id' and 'metric' columns.
-            k (int): The number of best configuration IDs to return.
-
-        Returns:
-            List[int]: A list of best 'k' configuration IDs.
-        """
-        if self.minimization:
-            grouped_data = data.groupby('configuration_id')['metric'].min().reset_index()
-        else:
-            grouped_data = data.groupby('configuration_id')['metric'].max().reset_index()
-        sorted_bracket_history = grouped_data.sort_values('metric', ascending=self.minimization)
-        top_k = sorted_bracket_history.head(k)['configuration_id']
-        top_k = list(top_k)
-        return top_k
