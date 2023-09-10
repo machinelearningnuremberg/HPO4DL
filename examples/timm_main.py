@@ -5,9 +5,6 @@ import ConfigSpace as CS
 import argparse
 import json
 
-from dummy_objective import DummyObjective
-from timm_objective import TimmObjective
-
 
 def main():
     parser = argparse.ArgumentParser(
@@ -33,6 +30,11 @@ def main():
     parser.add_argument('--max-budget', type=int, default=1000,
                         help='maximum budget in epochs (default: 1000)')
     args = parser.parse_args()
+
+    sys.argv = ['']
+
+    from dummy_objective import DummyObjective
+    from timm_objective import TimmObjective
 
     # from pathlib import Path
     # import pandas as pd

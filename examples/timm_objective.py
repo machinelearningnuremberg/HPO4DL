@@ -69,6 +69,15 @@ class TimmObjective:
             **configuration,
         )
 
+        # Renaming 'last.pth.tar' to 'last'
+        old_name = Path(*path_parts[:-1]) / 'last.pth.tar'
+        new_name = Path(*path_parts[:-1]) / path_parts[-1]
+
+        try:
+            os.rename(str(old_name), str(new_name))
+        except OSError as ex:
+            print(f"Error renaming {old_name} to {new_name}: {ex.strerror}")
+
         # remove extra checkpoint files made by timm script to save space.
         trial_checkpoint_path = Path(*path_parts[:-1]) / 'checkpoint*'
         files = glob.glob(str(trial_checkpoint_path))

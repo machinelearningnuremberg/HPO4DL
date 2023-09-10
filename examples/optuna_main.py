@@ -8,9 +8,6 @@ import sys
 import argparse
 import json
 
-from dummy_objective import DummyObjective
-from timm_objective import TimmObjective
-
 objective_instance = None
 checkpoint_root_path = None
 checkpoint_map = {}
@@ -100,6 +97,11 @@ def main():
     parser.add_argument('--max-budget', type=int, default=1000,
                         help='maximum budget in epochs (default: 1000)')
     args = parser.parse_args()
+
+    sys.argv = ['']
+
+    from dummy_objective import DummyObjective
+    from timm_objective import TimmObjective
 
     global checkpoint_root_path, result_logger, max_epochs, objective_instance, max_budget
 

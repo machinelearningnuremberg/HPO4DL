@@ -12,9 +12,6 @@ from smac.intensifier.successive_halving import SuccessiveHalving
 import argparse
 import json
 
-from dummy_objective import DummyObjective
-from timm_objective import TimmObjective
-
 objective_instance = None
 checkpoint_root_path = None
 checkpoint_map = {}
@@ -93,6 +90,11 @@ def main():
     parser.add_argument('--max-budget', type=int, default=225,
                         help='maximum budget in epochs (default: 225)')
     args = parser.parse_args()
+
+    sys.argv = ['']
+
+    from dummy_objective import DummyObjective
+    from timm_objective import TimmObjective
 
     global checkpoint_root_path, result_logger, objective_instance
 
