@@ -4,10 +4,10 @@ import ConfigSpace as CS
 from datetime import datetime
 from pathlib import Path
 import os
+import sys
 
 from dummy_objective import DummyObjective
 from timm_objective import objective_function
-from hpo4dl.utils.result_logger import ResultLogger
 
 checkpoint_root_path = None
 checkpoint_map = {}
@@ -15,7 +15,7 @@ prev_result_map = {}
 max_total_budget = 1000
 current_budget = 0
 max_epochs = 27
-result_logger: ResultLogger = None
+result_logger = None
 
 
 # Define an objective function to be maximized.
@@ -81,6 +81,13 @@ def main():
     random.seed(seed)
 
     global checkpoint_root_path, result_logger, max_epochs
+
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    parent_dir = os.path.dirname(script_dir)
+    print(parent_dir)
+    sys.path.append(parent_dir)
+    from hpo4dl.utils.result_logger import ResultLogger
+
     experiment_name = f'experiment_{datetime.now().strftime("%Y%m%d-%H%M%S")}'
     checkpoint_root_path = Path(os.path.expanduser('~/hpo4dl/optuna')) / experiment_name
     checkpoint_root_path.parent.mkdir(parents=True, exist_ok=True)

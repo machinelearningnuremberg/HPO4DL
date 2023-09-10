@@ -10,9 +10,14 @@ from timm_scripts import train
 
 def objective_function(configuration: Dict, epoch: int, previous_epoch: int, checkpoint_path: Path) -> List:
     seed = 0
-    model = 'mobilevit_xxs'
+    # dataset = 'torch/inaturalist'
+    # data_dir = './data/inaturalist'
+    # train_split = "kingdom/train"
+    # val_split = "kingdom/validation"
     dataset = 'torch/cifar10'
     data_dir = './data/cifar10'
+    train_split = "train"
+    val_split = "validation"
     dataset_download = True
     use_amp = torch.cuda.is_available()
 
@@ -24,7 +29,6 @@ def objective_function(configuration: Dict, epoch: int, previous_epoch: int, che
     metric = train.main_with_args(
         dataset=dataset,
         data_dir=data_dir,
-        # model=model,
         epochs=epoch,
         seed=seed,
         dataset_download=dataset_download,
@@ -32,10 +36,10 @@ def objective_function(configuration: Dict, epoch: int, previous_epoch: int, che
         output=str(output_checkpoint_path),
         experiment=experiment_name,
         checkpoint_hist=1,
-        val_split="test",
+        train_split=train_split,
+        val_split=val_split,
         eval_metric='top1',
         batch_size=128,
-        # opt="adam",
         sched="None",
         workers=4,
         amp=use_amp,

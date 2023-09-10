@@ -39,6 +39,7 @@ class Tuner:
         minimize: bool = False,
         seed: int = None,
         device: str = None,
+        checkpoint_path: Optional[Path] = None,
     ):
         self.seed = seed
         self.device = device
@@ -60,7 +61,10 @@ class Tuner:
             seed=self.seed
         )
 
-        checkpoint_path = Path(os.path.expanduser('~/hpo4dl')) / self.experiment_name
+        if checkpoint_path is None:
+            checkpoint_path = Path(os.path.expanduser('~/hpo4dl'))
+        checkpoint_path = checkpoint_path / self.experiment_name
+
         self.graybox_wrapper = GrayBoxWrapper(
             checkpoint_path=checkpoint_path,
             objective_function=self.objective_function,
