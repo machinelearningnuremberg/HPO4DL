@@ -24,7 +24,7 @@ def objective_function(configuration: Dict, epoch: int, previous_epoch: int, che
     metric = train.main_with_args(
         dataset=dataset,
         data_dir=data_dir,
-        model=model,
+        # model=model,
         epochs=epoch,
         seed=seed,
         dataset_download=dataset_download,
@@ -35,7 +35,7 @@ def objective_function(configuration: Dict, epoch: int, previous_epoch: int, che
         val_split="test",
         eval_metric='top1',
         batch_size=128,
-        opt="adam",
+        # opt="adam",
         sched="None",
         workers=4,
         amp=use_amp,

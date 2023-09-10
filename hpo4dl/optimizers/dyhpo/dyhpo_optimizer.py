@@ -5,10 +5,14 @@ import math
 import os
 import time
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
+import sklearn
 from sklearn.preprocessing import MinMaxScaler
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import FunctionTransformer, OneHotEncoder
 from scipy.stats import norm, t
 import torch
 import pandas as pd
@@ -33,6 +37,7 @@ class DyHPOOptimizer(AbstractOptimizer):
         output_path: str = '.',
         surrogate_config: dict = None,
         verbose: bool = True,
+        num_configurations: int = 1000
     ):
         """
         Args:
@@ -78,11 +83,11 @@ class DyHPOOptimizer(AbstractOptimizer):
 
         self.configuration_manager: AbstractConfigurationManager = configuration_manager
 
-        self.num_configurations: int = 2000
+        self.num_configurations: int = num_configurations
         self.configuration_manager.add_configurations(num_configurations=self.num_configurations)
 
         self.hp_candidates = self.configuration_manager.get_configurations()
-        self.hp_candidates = self.hp_candidates.to_numpy()
+        # self.hp_candidates = self.hp_candidates.to_numpy()
         self.log_indicator = self.configuration_manager.get_log_indicator()
 
         self.scaler = MinMaxScaler()
@@ -338,6 +343,8 @@ class DyHPOOptimizer(AbstractOptimizer):
         b = configuration_results[0]['epoch']
         score = configuration_results[0]['metric']
         alg_time = configuration_results[0]['time']
+
+        assert b >= 1, "epoch should be greater than zero."
 
         # if y is an undefined value, append 0 as the overhead since we finish here.
         if np.isnan(score).any():
@@ -663,7 +670,7 @@ class DyHPOOptimizer(AbstractOptimizer):
         with open(os.path.join(self.output_path, f'{self.dataset_name}_{self.seed}.json'), 'w') as fp:
             json.dump(self.info_dict, fp)
 
-    def preprocess_hp_candidates(self) -> List:
+    def preprocess_hp_candidates_v0(self) -> List:
         """
         Preprocess the list of all hyperparameter candidates
         by  performing a log transform for the hyperparameters that
@@ -688,6 +695,81 @@ class DyHPOOptimizer(AbstractOptimizer):
         log_hp_candidates = self.scaler.fit_transform(log_hp_candidates)
 
         return log_hp_candidates
+
+    def preprocess_hp_candidates(self) -> np.ndarray:
+        """Preprocess the hyperparameter candidates.
+
+        Performs min-max standardization for the numerical attributes and
+        additionally one-hot encoding for the categorical attributes.
+
+        Returns:
+            preprocessed_candidates: np.ndarray
+                The transformed hyperparameter candidates after being
+                preprocessed.
+        """
+        categorical_indicator, indicator_categories = self.configuration_manager.get_categorical_indicator()
+        column_transformers = []
+        numerical_columns = [
+            col_index for col_index, category_indicator in enumerate(categorical_indicator)
+            if not category_indicator
+        ]
+        categorical_columns = [
+            col_index for col_index, category_indicator in enumerate(categorical_indicator)
+            if category_indicator
+        ]
+
+        categories = "auto"
+        if categories is not None and len(categorical_columns) != 0:
+            categories = [
+                indicator_categories[col_index] for col_index, category_indicator in enumerate(categorical_indicator)
+                if category_indicator
+            ]
+
+        general_transformers = []
+
+        if len(numerical_columns) > 0:
+            if self.log_indicator is not None and any(self.log_indicator):
+                log_columns = [col_index for col_index, log_indicator in enumerate(self.log_indicator) if log_indicator]
+                log_transformer = FunctionTransformer(np.log)
+                column_transformers.append(
+                    (
+                        'log_pre',
+                        ColumnTransformer(
+                            [('log', log_transformer, log_columns)],
+                            remainder='passthrough'
+                        )
+                    )
+                )
+
+            general_transformers.append(('num', MinMaxScaler(), numerical_columns))
+
+        if len(categorical_columns) > 0:
+            general_transformers.append(
+                (
+                    'cat',
+                    OneHotEncoder(
+                        sparse_output=False,
+                        categories=categories,
+                        handle_unknown='ignore'
+                    ),
+                    categorical_columns,
+                )
+            )
+        column_transformers.append(
+            ('feature_types_pre', ColumnTransformer(general_transformers, remainder='passthrough')))
+
+        preprocessor = Pipeline(
+            column_transformers
+        )
+
+        sklearn.set_config(transform_output="pandas")
+        # hp_candidates_pd = pd.DataFrame(self.hp_candidates, columns=self.configuration_manager.configuration_names)
+
+        preprocessed_candidates = preprocessor.fit_transform(self.hp_candidates)
+        preprocessed_candidates.fillna(0, inplace=True)
+        preprocessed_candidates = preprocessed_candidates.to_numpy()
+
+        return preprocessed_candidates
 
     @staticmethod
     def patch_curves_to_same_length(curves):

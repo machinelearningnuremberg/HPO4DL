@@ -76,6 +76,7 @@ class Tuner:
                 device=self.device,
             )
         elif optimizer == 'dyhpo':
+            num_configurations = 1000
             self.surrogate = DyHPOOptimizer(
                 max_epochs=self.max_epochs,
                 total_budget=self.optimizer_budget,
@@ -84,6 +85,7 @@ class Tuner:
                 minimization=self.minimize,
                 device=self.device,
                 output_path=str(self.result_path),
+                num_configurations=num_configurations,
             )
         else:
             raise ValueError(f"optimizer {optimizer} does not exist.")

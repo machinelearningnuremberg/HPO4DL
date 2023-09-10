@@ -2,7 +2,7 @@
 """
 
 from abc import ABC, abstractmethod
-from typing import Dict, Optional
+from typing import Dict, Optional, Tuple, List
 import ConfigSpace as CS
 import pandas as pd
 
@@ -45,4 +45,9 @@ class AbstractConfigurationManager(ABC):
     @abstractmethod
     def get_log_indicator(self):
         """ Get log indicator for configuration space.
+        """
+
+    @abstractmethod
+    def get_categorical_indicator(self) -> Tuple[List, Dict]:
+        """ Get categorical indicator for configuration space.
         """

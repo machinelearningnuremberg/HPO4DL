@@ -4,6 +4,7 @@
 import warnings
 from typing import List, Dict, Optional, Set, Tuple
 import ConfigSpace as CS
+from ConfigSpace import CategoricalHyperparameter
 import pandas as pd
 
 from .abstract_configuration_manager import AbstractConfigurationManager
@@ -27,15 +28,33 @@ class ConfigurationManager(AbstractConfigurationManager):
         self.configurations_set: Set[Tuple] = set()
         self.configurations_df: pd.DataFrame = pd.DataFrame()
         self.log_indicator = []
+        self.categorical_indicator = []
+        self.categories = {}
         self.all_unique_configurations_added = False
 
-        self.configuration_names = [hp.name for hp in self.configuration_space.get_hyperparameters()]
+        self.configuration_names = self.get_configuration_names()
 
         if self.seed is not None:
             self.configuration_space.seed(self.seed)
 
         self.generate_log_indicator()
+        self.generate_categorical_indicator()
         self.add_configurations(num_configurations=self.num_configurations)
+
+    def get_configuration_names(self) -> List:
+        log_names = []
+        categorical_names = []
+        rem_names = []
+        for hp in self.configuration_space.get_hyperparameters():
+            if isinstance(hp, CategoricalHyperparameter):
+                categorical_names.append(hp.name)
+            elif hasattr(hp, 'log') and hp.log:
+                log_names.append(hp.name)
+            else:
+                rem_names.append(hp.name)
+
+        names = log_names + rem_names + categorical_names
+        return names
 
     def get_configurations(self) -> pd.DataFrame:
         """ Returns all generated configurations as a DataFrame.
@@ -73,6 +92,9 @@ class ConfigurationManager(AbstractConfigurationManager):
         while num_added < num_configurations and num_tries < max_try_limit:
             num_configurations_to_fill = num_configurations - num_added
             configurations = self.generate_configurations(num_configurations=num_configurations_to_fill)
+            # When num_configurations_to_fill=1 output is not a list.
+            if not isinstance(configurations, List):
+                configurations = [configurations]
             for config in configurations:
                 config_tuple = tuple(sorted(config.items()))
                 if config_tuple not in self.configurations_set or self.all_unique_configurations_added:
@@ -96,5 +118,21 @@ class ConfigurationManager(AbstractConfigurationManager):
                 log_indicator[hp.name] = False
         self.log_indicator = [log_indicator[k] for k in self.configuration_names]
 
+    def generate_categorical_indicator(self):
+        categorical_indicator = {}
+        categories = {}
+        for hp in self.configuration_space.get_hyperparameters():
+            if isinstance(hp, CategoricalHyperparameter):
+                categorical_indicator[hp.name] = True
+                categories[hp.name] = hp.choices
+            else:
+                categorical_indicator[hp.name] = False
+                categories[hp.name] = []
+        self.categorical_indicator = [categorical_indicator[k] for k in self.configuration_names]
+        self.categories = [categories[k] for k in self.configuration_names]
+
     def get_log_indicator(self):
         return self.log_indicator
+
+    def get_categorical_indicator(self):
+        return self.categorical_indicator, self.categories
