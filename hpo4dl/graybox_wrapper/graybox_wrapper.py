@@ -26,6 +26,7 @@ class GrayBoxWrapper(AbstractGrayBoxWrapper):
         self.checkpoint_path = checkpoint_path
         self.previous_fidelities = {}
         self.trial_results = {}
+        checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
 
     def start_trial(
         self, configuration_id: List[int],

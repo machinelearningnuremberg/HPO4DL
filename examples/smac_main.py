@@ -47,7 +47,7 @@ def objective(config: CS.Configuration, seed: int = 0, budget: int = 27):
     epoch = int(budget)
     if (config_tuple, epoch) not in prev_result_map:
         previous_epoch = prev_epoch_map[config_tuple] if config_tuple in prev_epoch_map else 0
-        eval_result = DummyObjective.dummy_objective_function(
+        eval_result = objective_function(
             configuration=configuration,
             epoch=epoch,
             previous_epoch=previous_epoch,

@@ -92,7 +92,8 @@ class Tuner:
 
         self.result_logger = ResultLogger(
             path=self.result_path,
-            minimize=self.minimize
+            minimize=self.minimize,
+            configuration_space=self.configuration_space,
         )
 
     def run(self) -> Dict:

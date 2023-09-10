@@ -44,12 +44,12 @@ def main():
     config_space.add_condition(cond)
 
     tuner = Tuner(
-        # objective_function=objective_function,
-        objective_function=DummyObjective.dummy_objective_function,
+        objective_function=objective_function,
+        # objective_function=DummyObjective.dummy_objective_function,
         configuration_space=config_space,
         minimize=False,
         max_total_budget=1000,
-        optimizer='hyperband',
+        optimizer='dyhpo',
         seed=seed,
         max_epochs=27,
         result_path='./hpo4dl_results',

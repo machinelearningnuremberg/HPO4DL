@@ -4,16 +4,36 @@
 from pathlib import Path
 import pandas as pd
 from typing import List, Dict
+import json
 
 
 class ResultLogger:
     """ Logger for saving configuration results.
     """
 
-    def __init__(self, path: Path, minimize: bool = False):
+    def __init__(self, path: Path, minimize: bool = False, configuration_space=None):
         self.root_path = path
         self.minimize = minimize
         self.history_data: pd.DataFrame = pd.DataFrame()
+        self.root_path.mkdir(parents=True, exist_ok=True)
+        if configuration_space is not None:
+            self.save_configuration_space(configuration_space=configuration_space)
+
+    def save_configuration_space(self, configuration_space):
+        hyperparameters = []
+        for hp in configuration_space.get_hyperparameters():
+            hp_dict = {
+                "name": hp.name,
+                "type": type(hp).__name__,
+                "default": hp.default_value,
+                "values": None if not hasattr(hp, "choices") else list(hp.choices),
+                "bounds": None if not hasattr(hp, "lower") else [hp.lower, hp.upper],
+                "log": None if not hasattr(hp, "log") else hp.log
+            }
+            hyperparameters.append(hp_dict)
+
+        with open(self.root_path / 'configuration_space.json', 'w') as f:
+            json.dump(hyperparameters, f, indent=4)
 
     def add_configuration_results(self, configuration_results):
         """ Add configuration results to result log.

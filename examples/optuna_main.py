@@ -42,7 +42,7 @@ def objective(trial: optuna.Trial):
     eval_result = []
     for epoch in range(1, max_epochs + 1):
         if (config_tuple, epoch) not in prev_result_map:
-            eval_result = DummyObjective.dummy_objective_function(
+            eval_result = objective_function(
                 configuration=configuration,
                 epoch=epoch,
                 previous_epoch=epoch - 1,
