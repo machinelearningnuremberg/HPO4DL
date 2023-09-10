@@ -30,16 +30,16 @@ class Tuner:
 
     def __init__(
         self,
-        objective_function: Callable[[Dict, int, int, Path], Union[List, int, float]],
+        objective_function: Callable[[Dict, int, int, str], Union[List, int, float]],
         configuration_space: CS.ConfigurationSpace,
         max_epochs: int,
-        max_total_budget: Optional[int],
-        result_path: Union[str, Path],
-        optimizer: Literal["hyperband", "dyhpo"] = 'hyperband',
+        max_budget: Optional[int],
+        output_path: Union[str, Path],
+        optimizer: Literal["hyperband", "dyhpo"] = 'dyhpo',
         minimize: bool = False,
         seed: int = None,
         device: str = None,
-        checkpoint_path: Optional[Path] = None,
+        storage_path: Union[Path, str, None] = None,
     ):
         self.seed = seed
         self.device = device
@@ -47,13 +47,13 @@ class Tuner:
         self.configuration_space = configuration_space
         self.optimizer = optimizer
         self.minimize = minimize
-        self.optimizer_budget = max_total_budget
+        self.optimizer_max_budget = max_budget
         self.max_epochs = max_epochs
         self.current_optimizer_budget = 0
         self.num_configurations = 0
         self.best_configuration_info = {}
         self.experiment_name = f'experiment_{datetime.now().strftime("%Y%m%d-%H%M%S")}'
-        self.result_path = Path(result_path) / self.experiment_name
+        self.output_path = Path(output_path) / self.experiment_name
 
         self.configuration_manager = ConfigurationManager(
             configuration_space=self.configuration_space,
@@ -61,9 +61,10 @@ class Tuner:
             seed=self.seed
         )
 
-        if checkpoint_path is None:
-            checkpoint_path = Path(os.path.expanduser('~/hpo4dl'))
-        checkpoint_path = checkpoint_path / self.experiment_name
+        if storage_path is None:
+            storage_path = Path(os.path.expanduser('~/hpo4dl'))
+        self.storage_path = Path(storage_path) / 'hpo4dl'
+        checkpoint_path = self.storage_path / self.experiment_name
 
         self.graybox_wrapper = GrayBoxWrapper(
             checkpoint_path=checkpoint_path,
@@ -83,19 +84,19 @@ class Tuner:
             num_configurations = 1000
             self.surrogate = DyHPOOptimizer(
                 max_epochs=self.max_epochs,
-                total_budget=self.optimizer_budget,
+                total_budget=self.optimizer_max_budget,
                 configuration_manager=self.configuration_manager,
                 seed=self.seed,
                 minimization=self.minimize,
                 device=self.device,
-                output_path=str(self.result_path),
+                output_path=str(self.output_path),
                 num_configurations=num_configurations,
             )
         else:
             raise ValueError(f"optimizer {optimizer} does not exist.")
 
         self.result_logger = ResultLogger(
-            path=self.result_path,
+            path=self.output_path,
             minimize=self.minimize,
             configuration_space=self.configuration_space,
         )
@@ -107,7 +108,7 @@ class Tuner:
             Dict: the best configuration found.
 
         """
-        while self.optimizer_budget is None or self.current_optimizer_budget < self.optimizer_budget:
+        while self.optimizer_max_budget is None or self.current_optimizer_budget < self.optimizer_max_budget:
             configuration_indices, fidelities = self.surrogate.suggest()
             if configuration_indices is None:
                 break
@@ -145,7 +146,7 @@ class Tuner:
         checkpoint_path = self.graybox_wrapper.get_checkpoint_path(configuration_id=configuration_id)
         checkpoint_path = checkpoint_path.parent
         if checkpoint_path.exists():
-            destination_file_path = self.result_path / 'checkpoints'
+            destination_file_path = self.output_path / 'checkpoints'
             shutil.copytree(checkpoint_path, destination_file_path)
         else:
             warnings.warn("Best model checkpoint does not exist.", RuntimeWarning)

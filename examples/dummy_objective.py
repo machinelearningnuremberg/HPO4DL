@@ -3,12 +3,30 @@ import random
 from pathlib import Path
 from typing import List, Dict
 import numpy as np
+import ConfigSpace as CS
 
 
 class DummyObjective:
     dummy_curves = {}
     dummy_max_budget = 100
     dummy_is_minimize = False
+
+    def __init__(self, seed=42):
+        self.seed = seed
+
+    @property
+    def configspace(self) -> CS.ConfigurationSpace:
+        config_space = CS.ConfigurationSpace(seed=self.seed)
+        config_space.add_hyperparameters([
+            CS.UniformFloatHyperparameter('lr', lower=1e-5, upper=1, log=True),
+            CS.UniformFloatHyperparameter('weight_decay', lower=1e-5, upper=1, log=True),
+            CS.CategoricalHyperparameter('model', choices=["mobilevit_xxs", "dla60x_c", "edgenext_xx_small"]),
+            CS.CategoricalHyperparameter('opt', choices=["sgd", "adam"]),
+            CS.UniformFloatHyperparameter('momentum', lower=0.1, upper=0.99),
+        ])
+        cond = CS.EqualsCondition(config_space['momentum'], config_space['opt'], "sgd")
+        config_space.add_condition(cond)
+        return config_space
 
     @staticmethod
     def get_random_curve() -> np.ndarray:
@@ -32,7 +50,7 @@ class DummyObjective:
         return curve
 
     @staticmethod
-    def dummy_objective_function(configuration: Dict, epoch: int, previous_epoch: int, checkpoint_path: Path) -> List:
+    def objective_function(configuration: Dict, epoch: int, previous_epoch: int, checkpoint_path: Path) -> List:
         checkpoint_path_str = str(checkpoint_path)
         if checkpoint_path_str not in DummyObjective.dummy_curves:
             DummyObjective.dummy_curves[checkpoint_path_str] = DummyObjective.get_random_curve()
