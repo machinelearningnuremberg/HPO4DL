@@ -2,7 +2,7 @@
 The Tuner uses various optimization strategies to find the best hyperparameters
 for a given objective function.
 """
-
+import time
 import warnings
 import shutil
 import os
@@ -109,7 +109,14 @@ class Tuner:
 
         """
         while self.optimizer_max_budget is None or self.current_optimizer_budget < self.optimizer_max_budget:
+            surrogate_overhead_time = 0
+
+            surrogate_start_time = time.perf_counter()
             configuration_indices, fidelities = self.surrogate.suggest()
+            surrogate_end_time = time.perf_counter()
+
+            surrogate_overhead_time += (surrogate_end_time - surrogate_start_time)
+
             if configuration_indices is None:
                 break
 
@@ -117,9 +124,21 @@ class Tuner:
                 configuration_id=configuration_indices,
                 epoch=fidelities
             )
-            self.result_logger.add_configuration_results(configuration_results=configuration_results)
 
+            surrogate_start_time = time.perf_counter()
             self.surrogate.observe(configuration_results=configuration_results)
+            surrogate_end_time = time.perf_counter()
+
+            surrogate_overhead_time += (surrogate_end_time - surrogate_start_time)
+
+            single_entry_overhead_time = surrogate_overhead_time / len(configuration_results)
+
+            # Add surrogate overhead time
+            for entry in configuration_results:
+                entry["overhead_time"] = single_entry_overhead_time
+                entry["total_time"] = entry["time"] + single_entry_overhead_time
+
+            self.result_logger.add_configuration_results(configuration_results=configuration_results)
 
         best_configuration_info = self.result_logger.get_best_configuration()
 

@@ -135,6 +135,7 @@ def main():
     max_epochs = args.max_epochs
     max_budget = args.max_budget
     study = optuna.create_study(
+        study_name=f'hpo4dl_{args.seed}',
         direction='maximize',
     )
     study.optimize(objective)
