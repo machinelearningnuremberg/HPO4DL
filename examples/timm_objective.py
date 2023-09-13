@@ -49,7 +49,7 @@ class TimmObjective:
         output_checkpoint_path = Path(*path_parts[:-2])
         resume_checkpoint_path = checkpoint_path if previous_epoch > 0 else ''
 
-        metric = train.main_with_args(
+        evaluated_metrics = train.main_with_args(
             dataset=self.dataset,
             data_dir=data_dir,
             epochs=epoch,
@@ -68,6 +68,10 @@ class TimmObjective:
             amp=use_amp,
             **configuration,
         )
+
+        # Normalize top-1 accuracy metric
+        for item in evaluated_metrics:
+            item['metric'] /= 100
 
         # Renaming 'last.pth.tar' to 'last'
         old_name = Path(*path_parts[:-1]) / 'last.pth.tar'
@@ -89,4 +93,4 @@ class TimmObjective:
                 print(f"Error: {file} : {ex.strerror}")
 
         # return metric should be a dictionary with 'epoch' and 'metric'.
-        return metric
+        return evaluated_metrics
