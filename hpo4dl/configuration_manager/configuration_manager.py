@@ -109,6 +109,13 @@ class ConfigurationManager(AbstractConfigurationManager):
             self.all_unique_configurations_added = True
             self.add_configurations(num_configurations - num_added)
 
+    def set_configuration(self, configuration):
+        config_tuple = tuple(sorted(configuration.items()))
+        self.configurations.append(configuration)
+        self.configurations_set.add(config_tuple)
+        self.configurations_df = pd.DataFrame(self.configurations)
+        self.configurations_df = self.configurations_df[self.configuration_names]
+
     def generate_log_indicator(self):
         log_indicator = {}
         for hp in self.configuration_space.get_hyperparameters():

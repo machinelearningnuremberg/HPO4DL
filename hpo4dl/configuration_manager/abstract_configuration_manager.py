@@ -42,6 +42,13 @@ class AbstractConfigurationManager(ABC):
             int: Number of configurations added.
         """
 
+    def set_configuration(self, configuration):
+        """ Add the configuration to the list.
+
+        Args:
+            configuration: configuration to add.
+        """
+
     @abstractmethod
     def get_log_indicator(self):
         """ Get log indicator for configuration space.
