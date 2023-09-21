@@ -1,4 +1,6 @@
 import random
+import time
+
 import optuna
 import ConfigSpace as CS
 from datetime import datetime
@@ -16,12 +18,16 @@ max_budget = 1000
 current_budget = 0
 max_epochs = 27
 result_logger = None
+surrogate_overhead_start_time = 0
 
 
 # Define an objective function to be maximized.
 def objective(trial: optuna.Trial):
     # Suggest values of the hyperparameters using a trial object.
-    global checkpoint_root_path, checkpoint_map, max_budget, current_budget, max_epochs, result_logger
+    global checkpoint_root_path, checkpoint_map, max_budget, current_budget, max_epochs, \
+        result_logger, surrogate_overhead_start_time
+
+    surrogate_overhead_time = time.perf_counter() - surrogate_overhead_start_time
 
     configuration = {
         'lr': trial.suggest_float('lr', 1e-5, 1, log=True),
@@ -39,8 +45,9 @@ def objective(trial: optuna.Trial):
 
     checkpoint_path, checkpoint_id = checkpoint_map[config_tuple]
 
-    eval_result = []
+    configuration_results = []
     for epoch in range(1, max_epochs + 1):
+        model_start_time = time.perf_counter()
         if (config_tuple, epoch) not in prev_result_map:
             eval_result = objective_instance.objective_function(
                 configuration=configuration,
@@ -53,16 +60,19 @@ def objective(trial: optuna.Trial):
             print(f"Configuration already evaluated. {config_tuple} epoch {epoch}")
             eval_result = prev_result_map[(config_tuple, epoch)]
 
-        configuration_results = []
+        model_end_time = time.perf_counter()
+        model_execution_time = model_end_time - model_start_time
+        single_model_execution_time = model_execution_time / len(eval_result)
+
         for i, result in enumerate(eval_result):
             trial.report(result['metric'], result['epoch'])
             configuration_result = {
                 **result,
                 'configuration_id': checkpoint_id,
                 'configuration': configuration,
+                'time': single_model_execution_time,
             }
             configuration_results.append(configuration_result)
-        result_logger.add_configuration_results(configuration_results)
 
         current_budget += 1
         if current_budget >= max_budget:
@@ -70,7 +80,20 @@ def objective(trial: optuna.Trial):
             trial.study.stop()
 
         if trial.should_prune():
+            single_entry_overhead_time = surrogate_overhead_time / len(configuration_results)
+            for entry in configuration_results:
+                entry["overhead_time"] = single_entry_overhead_time
+                entry["total_time"] = entry["time"] + single_entry_overhead_time
+            result_logger.add_configuration_results(configuration_results)
+            surrogate_overhead_start_time = time.perf_counter()
             raise optuna.TrialPruned()
+
+    single_entry_overhead_time = surrogate_overhead_time / len(configuration_results)
+    for entry in configuration_results:
+        entry["overhead_time"] = single_entry_overhead_time
+        entry["total_time"] = entry["time"] + single_entry_overhead_time
+    result_logger.add_configuration_results(configuration_results)
+    surrogate_overhead_start_time = time.perf_counter()
 
     return eval_result[-1]['metric']
 
@@ -103,7 +126,8 @@ def main():
     from dummy_objective import DummyObjective
     from timm_objective import TimmObjective
 
-    global checkpoint_root_path, result_logger, max_epochs, objective_instance, max_budget
+    global checkpoint_root_path, result_logger, max_epochs, objective_instance, max_budget, \
+        surrogate_overhead_start_time
 
     script_dir = os.path.dirname(os.path.abspath(__file__))
     parent_dir = os.path.dirname(script_dir)
@@ -138,6 +162,9 @@ def main():
         study_name=f'hpo4dl_{args.seed}',
         direction='maximize',
     )
+
+    surrogate_overhead_start_time = time.perf_counter()
+
     study.optimize(objective)
 
     # print("Best Configuration Info", best_configuration)

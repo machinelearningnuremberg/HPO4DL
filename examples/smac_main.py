@@ -4,6 +4,7 @@ from datetime import datetime
 from pathlib import Path
 import os
 import sys
+import time
 from smac import MultiFidelityFacade as MFFacade
 from smac import Scenario, RunHistory
 from smac.facade import AbstractFacade
@@ -19,17 +20,17 @@ prev_result_map = {}
 prev_epoch_map = {}
 current_budget = 0
 result_logger = None
+surrogate_overhead_start_time = 0
 
 
 # Define an objective function to be maximized.
 def objective(config: CS.Configuration, seed: int = 0, budget: int = 27):
     # Suggest values of the hyperparameters using a trial object.
-    global checkpoint_root_path, checkpoint_map, result_logger, prev_result_map, prev_epoch_map
+    global checkpoint_root_path, checkpoint_map, result_logger, prev_result_map, prev_epoch_map, \
+        surrogate_overhead_start_time
 
-    # configuration = {
-    #     'lr': config.get("lr", 1e-3),
-    #     'weight_decay': config.get("weight_decay", 1e-4),
-    # }
+    surrogate_overhead_time = time.perf_counter() - surrogate_overhead_start_time
+
     configuration = dict(config)
 
     config_tuple = tuple(sorted(configuration.items()))
@@ -40,6 +41,7 @@ def objective(config: CS.Configuration, seed: int = 0, budget: int = 27):
     checkpoint_path, checkpoint_id = checkpoint_map[config_tuple]
 
     epoch = int(budget)
+    model_start_time = time.perf_counter()
     if (config_tuple, epoch) not in prev_result_map:
         previous_epoch = prev_epoch_map[config_tuple] if config_tuple in prev_epoch_map else 0
         eval_result = objective_instance.objective_function(
@@ -54,17 +56,27 @@ def objective(config: CS.Configuration, seed: int = 0, budget: int = 27):
         print(f"Configuration already evaluated. {config_tuple} epoch {epoch}")
         eval_result = prev_result_map[(config_tuple, epoch)]
 
+    model_end_time = time.perf_counter()
+    model_execution_time = model_end_time - model_start_time
+    single_model_execution_time = model_execution_time / len(eval_result)
+
+    single_surrogate_overhead_time = surrogate_overhead_time / len(eval_result)
+
     configuration_results = []
     for i, result in enumerate(eval_result):
         configuration_result = {
             **result,
             'configuration_id': checkpoint_id,
             'configuration': configuration,
+            'time': single_model_execution_time,
+            'overhead_time': single_surrogate_overhead_time,
         }
         configuration_results.append(configuration_result)
     result_logger.add_configuration_results(configuration_results)
 
     metrics = [v['metric'] for v in eval_result]
+    surrogate_overhead_start_time = time.perf_counter()
+
     return 1 - max(metrics)
 
 
@@ -96,7 +108,7 @@ def main():
     from dummy_objective import DummyObjective
     from timm_objective import TimmObjective
 
-    global checkpoint_root_path, result_logger, objective_instance
+    global checkpoint_root_path, result_logger, objective_instance, surrogate_overhead_start_time
 
     script_dir = os.path.dirname(os.path.abspath(__file__))
     parent_dir = os.path.dirname(script_dir)
@@ -139,6 +151,9 @@ def main():
         intensifier=intensifier,
         overwrite=True,
     )
+
+    surrogate_overhead_start_time = time.perf_counter()
+
     incumbent = smac.optimize()
 
     print("incumbent Info", incumbent)

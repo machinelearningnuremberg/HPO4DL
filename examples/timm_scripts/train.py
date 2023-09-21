@@ -766,6 +766,9 @@ def main():
     eval_performances = []
     try:
         for epoch in range(start_epoch, num_epochs):
+            # Added to fix resume checkpoint
+            utils.random_seed(args.seed + epoch, args.rank)
+
             if hasattr(dataset_train, 'set_epoch'):
                 dataset_train.set_epoch(epoch)
             elif args.distributed and hasattr(loader_train.sampler, 'set_epoch'):
