@@ -65,7 +65,7 @@ def main():
         seed=args.seed,
         storage_dir=storage_dir,
     )
-    # objective_instance = DummyObjective(seed=args.seed)
+    objective_instance = DummyObjective(seed=args.seed)
 
     tuner = Tuner(
         objective_function=objective_instance.objective_function,

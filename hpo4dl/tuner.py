@@ -19,6 +19,7 @@ from hpo4dl.optimizers.abstract_optimizer import AbstractOptimizer
 from hpo4dl.optimizers.hyperband.hyperband import HyperBand
 from hpo4dl.optimizers.dyhpo.dyhpo_optimizer import DyHPOOptimizer
 from hpo4dl.utils.result_logger import ResultLogger
+from hpo4dl.utils.configuration_result import ConfigurationInfo
 
 
 class Tuner:
@@ -37,6 +38,7 @@ class Tuner:
         output_path: Union[str, Path],
         optimizer: Literal["hyperband", "dyhpo"] = 'dyhpo',
         minimize: bool = False,
+        num_configurations: int = 1000,
         seed: int = None,
         device: str = None,
         storage_path: Union[Path, str, None] = None,
@@ -50,7 +52,7 @@ class Tuner:
         self.optimizer_max_budget = max_budget
         self.max_epochs = max_epochs
         self.current_optimizer_budget = 0
-        self.num_configurations = 0
+        self.num_configurations = num_configurations
         self.best_configuration_info = {}
         self.experiment_name = f'experiment_{datetime.now().strftime("%Y%m%d-%H%M%S")}'
         self.output_path = Path(output_path) / self.experiment_name
@@ -69,7 +71,6 @@ class Tuner:
         self.graybox_wrapper = GrayBoxWrapper(
             checkpoint_path=checkpoint_path,
             objective_function=self.objective_function,
-            configuration_manager=self.configuration_manager,
         )
 
         if optimizer == 'hyperband':
@@ -81,7 +82,6 @@ class Tuner:
                 device=self.device,
             )
         elif optimizer == 'dyhpo':
-            num_configurations = 1000
             self.surrogate = DyHPOOptimizer(
                 max_epochs=self.max_epochs,
                 total_budget=self.optimizer_max_budget,
@@ -90,7 +90,8 @@ class Tuner:
                 minimization=self.minimize,
                 device=self.device,
                 output_path=str(self.output_path),
-                num_configurations=num_configurations,
+                num_configurations=self.num_configurations,
+                verbose=False,
             )
         else:
             raise ValueError(f"optimizer {optimizer} does not exist.")
@@ -120,8 +121,17 @@ class Tuner:
             if configuration_indices is None:
                 break
 
+            configuration_infos = []
+            for configuration_id in configuration_indices:
+                configuration = self.configuration_manager.get_configuration(configuration_id=configuration_id)
+                configuration_info = ConfigurationInfo(
+                    configuration=configuration,
+                    configuration_id=configuration_id,
+                )
+                configuration_infos.append(configuration_info)
+
             configuration_results = self.graybox_wrapper.start_trial(
-                configuration_id=configuration_indices,
+                configuration_info=configuration_infos,
                 epoch=fidelities
             )
 

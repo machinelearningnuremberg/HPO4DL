@@ -5,6 +5,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import List, Dict, Callable
 
+from hpo4dl.utils.configuration_result import ConfigurationInfo
 from hpo4dl.configuration_manager.abstract_configuration_manager import AbstractConfigurationManager
 
 
@@ -20,7 +21,7 @@ class AbstractGrayBoxWrapper(ABC):
         configuration_manager: AbstractConfigurationManager
     ):
         """ Initialize graybox wrapper.
-
+z
         Args:
             checkpoint_path: path to save checkpoints.
             objective_function : A function that defines the optimization problem.
@@ -31,13 +32,13 @@ class AbstractGrayBoxWrapper(ABC):
     @abstractmethod
     def start_trial(
         self,
-        configuration_id: List[int],
+        configuration_info: List[ConfigurationInfo],
         epoch: List[int]
     ) -> List[Dict]:
         """ Evaluate a batch of configurations.
 
         Args:
-            configuration_id: IDs of the configurations to be evaluated.
+            configuration_info: IDs of the configurations to be evaluated.
             epoch: The epochs to be evaluated.
 
         Returns:

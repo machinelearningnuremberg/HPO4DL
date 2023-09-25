@@ -31,12 +31,12 @@ class FeatureExtractor(nn.Module):
         for i in range(2, self.nr_layers):
             setattr(
                 self,
-                f'fc{i + 1}',
+                f'fc{i}',
                 nn.Linear(configuration[f'layer{i - 1}_units'], configuration[f'layer{i}_units']),
             )
             setattr(
                 self,
-                f'bn{i + 1}',
+                f'bn{i}',
                 nn.BatchNorm1d(configuration[f'layer{i}_units']),
             )
 

@@ -50,7 +50,7 @@ class DummyObjective:
         return curve
 
     @staticmethod
-    def objective_function(configuration: Dict, epoch: int, previous_epoch: int, checkpoint_path: Path) -> List:
+    def objective_function(configuration: Dict, epoch: int, previous_epoch: int, checkpoint_path: str) -> List:
         checkpoint_path_str = str(checkpoint_path)
         if checkpoint_path_str not in DummyObjective.dummy_curves:
             DummyObjective.dummy_curves[checkpoint_path_str] = DummyObjective.get_random_curve()

@@ -7,6 +7,7 @@ import time
 import shutil
 import logging
 
+from hpo4dl.utils.configuration_result import ConfigurationInfo
 from hpo4dl.graybox_wrapper.abstract_graybox_wrapper import AbstractGrayBoxWrapper
 from hpo4dl.configuration_manager.abstract_configuration_manager import AbstractConfigurationManager
 
@@ -19,49 +20,49 @@ class GrayBoxWrapper(AbstractGrayBoxWrapper):
         self,
         checkpoint_path: Path,
         objective_function: Callable,
-        configuration_manager: AbstractConfigurationManager,
     ):
         self.objective_function = objective_function
-        self.configuration_manager = configuration_manager
         self.checkpoint_path = checkpoint_path
         self.previous_fidelities = {}
         self.trial_results = {}
         checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
 
     def start_trial(
-        self, configuration_id: List[int],
+        self,
+        configuration_info: List[ConfigurationInfo],
         epoch: List[int]
     ) -> List[Dict]:
         """ Evaluate a batch of configurations.
 
         Args:
-            configuration_id: IDs of the configurations to be evaluated.
+            configuration_info: IDs of the configurations to be evaluated.
             epoch: The epochs to be evaluated.
 
         Returns:
             List[Dict]: Configuration results for all configuration/epoch pair.
         """
         all_configuration_results = []
-        for trial_config_id, trial_epoch in zip(configuration_id, epoch):
-            configuration_results = self._run(configuration_id=trial_config_id, epoch=trial_epoch)
+        for trial_config_info, trial_epoch in zip(configuration_info, epoch):
+            configuration_results = self._run(configuration_info=trial_config_info, epoch=trial_epoch)
             all_configuration_results.extend(configuration_results)
 
         return all_configuration_results
 
-    def _run(self, configuration_id: int, epoch: int) -> List[Dict]:
+    def _run(self, configuration_info: ConfigurationInfo, epoch: int) -> List[Dict]:
         """ Evaluate a configuration.
 
         Args:
-            configuration_id: ID of the configuration to be evaluated.
+            configuration_info: ID of the configuration to be evaluated.
             epoch: The epoch to be evaluated.
 
         Returns:
             Dict: Configuration results for the given configuration/epoch pair.
         """
+        configuration_id = configuration_info.configuration_id
+        configuration = configuration_info.configuration
+
         if (configuration_id, epoch) in self.trial_results:
             return self.trial_results[(configuration_id, epoch)]
-
-        configuration = self.configuration_manager.get_configuration(configuration_id=configuration_id)
 
         checkpoint_path = self.get_checkpoint_path(configuration_id)
         checkpoint_path.parent.mkdir(parents=True, exist_ok=True)

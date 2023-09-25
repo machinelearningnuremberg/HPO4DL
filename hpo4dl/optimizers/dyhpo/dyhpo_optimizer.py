@@ -144,6 +144,7 @@ class DyHPOOptimizer(AbstractOptimizer):
                 'nr_initial_features': self.nr_features,
                 'layer1_units': 64,
                 'layer2_units': 128,
+                'layer3_units': 128,
                 'cnn_nr_channels': 4,
                 'cnn_kernel_size': 3,
                 'batch_size': 64,
