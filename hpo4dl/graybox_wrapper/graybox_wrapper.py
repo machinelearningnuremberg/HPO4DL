@@ -2,14 +2,12 @@
 """
 
 from pathlib import Path
-from typing import List, Dict, Callable
+from typing import List, Dict, Callable, Union, Tuple
 import time
 import shutil
-import logging
 
-from hpo4dl.utils.configuration_result import ConfigurationInfo
+from hpo4dl.utils.configuration_dataclasses import ConfigurationInfo
 from hpo4dl.graybox_wrapper.abstract_graybox_wrapper import AbstractGrayBoxWrapper
-from hpo4dl.configuration_manager.abstract_configuration_manager import AbstractConfigurationManager
 
 
 class GrayBoxWrapper(AbstractGrayBoxWrapper):
@@ -19,12 +17,12 @@ class GrayBoxWrapper(AbstractGrayBoxWrapper):
     def __init__(
         self,
         checkpoint_path: Path,
-        objective_function: Callable,
+        objective_function: Callable[[Dict, int, int, str], Union[List[Dict], Dict]],
     ):
         self.objective_function = objective_function
         self.checkpoint_path = checkpoint_path
-        self.previous_fidelities = {}
-        self.trial_results = {}
+        self.previous_fidelities: Dict[int, int] = {}
+        self.trial_results: Dict[Tuple[int, int], List[Dict]] = {}
         checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
 
     def start_trial(
@@ -74,7 +72,7 @@ class GrayBoxWrapper(AbstractGrayBoxWrapper):
 
         start_time = time.perf_counter()
         configuration_result = self.objective_function(
-            configuration=configuration, epoch=epoch, previous_epoch=previous_epoch, checkpoint_path=checkpoint_path
+            configuration, epoch, previous_epoch, str(checkpoint_path)
         )
         end_time = time.perf_counter()
         execution_time = end_time - start_time

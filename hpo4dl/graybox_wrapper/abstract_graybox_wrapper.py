@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import List, Dict, Callable
 
-from hpo4dl.utils.configuration_result import ConfigurationInfo
+from hpo4dl.utils.configuration_dataclasses import ConfigurationInfo
 from hpo4dl.configuration_manager.abstract_configuration_manager import AbstractConfigurationManager
 
 

@@ -1,3 +1,8 @@
+""" Implementation of : `Supervising the Multi-Fidelity Race of Hyperparameter Configurations`  -
+https://arxiv.org/abs/2202.09774
+Original repository - https://github.com/releaunifreiburg/DyHPO
+"""
+
 import copy
 import json
 import logging
@@ -23,6 +28,8 @@ from hpo4dl.configuration_manager.abstract_configuration_manager import Abstract
 
 
 class DyHPOOptimizer(AbstractOptimizer):
+    """ DyHPO optimization algorithm.
+    """
 
     def __init__(
         self,
@@ -32,7 +39,7 @@ class DyHPOOptimizer(AbstractOptimizer):
         fantasize_step: int = 1,
         minimization: bool = True,
         total_budget: int = 500,
-        device: str = None,
+        device: Optional[str] = None,
         dataset_name: str = 'dyhpo',
         output_path: str = '.',
         surrogate_config: dict = None,

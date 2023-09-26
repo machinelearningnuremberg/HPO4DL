@@ -12,8 +12,7 @@ from hpo4dl.configuration_manager.abstract_configuration_manager import Abstract
 
 
 class HyperBand(AbstractOptimizer):
-    """ Implementation of : `Hyperband: A Novel Bandit-Based Approach to Hyperparameter Optimization`  -
-          https://arxiv.org/abs/1603.06560
+    """ Hyperband optimization algorithm.
     """
 
     def __init__(
@@ -23,13 +22,13 @@ class HyperBand(AbstractOptimizer):
         eta: int = 3,
         seed: Optional[int] = None,
         minimize: bool = False,
-        device: str = None,
+        device: Optional[str] = None,
     ):
         assert max_budget is not None, "Hyperband requires max_budget."
         self.max_budget: int = max_budget
         self.configuration_manager: AbstractConfigurationManager = configuration_manager
         self.eta: int = eta
-        self.seed: int = seed
+        self.seed: Optional[int] = seed
         self.minimize: bool = minimize
         self.device = device
 
@@ -48,9 +47,9 @@ class HyperBand(AbstractOptimizer):
         self.bracket_fidelity = self.bracket_fidelity.astype(int)
 
         # Initialize successive halving information
-        self.sh_num_config = []
-        self.sh_fidelity = []
-        self.sh_num_promotions = []
+        self.sh_num_config: List[List[int]] = []
+        self.sh_fidelity: List[List[int]] = []
+        self.sh_num_promotions: List[List[int]] = []
 
         for bracket_id, max_rungs in enumerate(self.bracket_max_rungs):
             num_configs = self.bracket_num_configs[bracket_id]

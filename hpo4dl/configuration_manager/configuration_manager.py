@@ -1,7 +1,6 @@
 """ Manages configurations for the hyperparameter tuning process.
 """
 
-import warnings
 from typing import List, Dict, Optional, Set, Tuple
 import ConfigSpace as CS
 from ConfigSpace import CategoricalHyperparameter
@@ -27,9 +26,9 @@ class ConfigurationManager(AbstractConfigurationManager):
         self.configurations: List[Dict] = []
         self.configurations_set: Set[Tuple] = set()
         self.configurations_df: pd.DataFrame = pd.DataFrame()
-        self.log_indicator = []
-        self.categorical_indicator = []
-        self.categories = {}
+        self.log_indicator: List = []
+        self.categorical_indicator: List = []
+        self.categories: List = []
         self.all_unique_configurations_added = False
 
         self.configuration_names = self.get_configuration_names()
@@ -42,16 +41,23 @@ class ConfigurationManager(AbstractConfigurationManager):
         self.add_configurations(num_configurations=self.num_configurations)
 
     def get_configuration_names(self) -> List:
+        """ Retrieves configuration names in a specific order.
+        The ordering is optimized to minimize column reordering during
+        preprocessing when using DyHPO. (log columns, other columns, categorical columns)
+
+        Returns:
+            List: A list of configuration names.
+        """
         log_names = []
         categorical_names = []
         rem_names = []
-        for hp in self.configuration_space.get_hyperparameters():
-            if isinstance(hp, CategoricalHyperparameter):
-                categorical_names.append(hp.name)
-            elif hasattr(hp, 'log') and hp.log:
-                log_names.append(hp.name)
+        for hparam in list(self.configuration_space.values()):
+            if isinstance(hparam, CategoricalHyperparameter):
+                categorical_names.append(hparam.name)
+            elif hasattr(hparam, 'log') and hparam.log:
+                log_names.append(hparam.name)
             else:
-                rem_names.append(hp.name)
+                rem_names.append(hparam.name)
 
         names = log_names + rem_names + categorical_names
         return names
@@ -59,6 +65,9 @@ class ConfigurationManager(AbstractConfigurationManager):
     def get_configurations(self) -> pd.DataFrame:
         """ Returns all generated configurations as a DataFrame.
         Would contain nan values for conditional configuration spaces.
+
+        Returns:
+            pd.DataFrame: All generated hyperparameter configurations.
         """
         return self.configurations_df
 
@@ -71,11 +80,12 @@ class ConfigurationManager(AbstractConfigurationManager):
         """ Generates a specified number of configurations.
         """
         configs = self.configuration_space.sample_configuration(num_configurations)
-        hp_configs = [config.get_dictionary() for config in configs]
+        hp_configs = [dict(config) for config in configs]
         return hp_configs
 
-    def add_configurations(self, num_configurations: int, max_try_limit: int = 100) -> int:
-        """ Adds a specified number of unique configurations to the list.
+    def add_configurations(self, num_configurations: int, max_try_limit: int = 100):
+        """ Adds a specified number of configurations to the list.
+        Would try to add unique configurations. If failed max_try_limit times, would allow duplicate configurations.
 
         Args:
             num_configurations: number of configurations to add.
@@ -84,9 +94,6 @@ class ConfigurationManager(AbstractConfigurationManager):
         Returns:
             int: Number of configurations added.
         """
-        if num_configurations == 0:
-            return 0
-
         num_added = 0
         num_tries = 0
         while num_added < num_configurations and num_tries < max_try_limit:
@@ -109,7 +116,9 @@ class ConfigurationManager(AbstractConfigurationManager):
             self.all_unique_configurations_added = True
             self.add_configurations(num_configurations - num_added)
 
-    def set_configuration(self, configuration):
+    def set_configuration(self, configuration: Dict):
+        """ Allows adding specific configuration.
+        """
         config_tuple = tuple(sorted(configuration.items()))
         self.configurations.append(configuration)
         self.configurations_set.add(config_tuple)
@@ -117,29 +126,37 @@ class ConfigurationManager(AbstractConfigurationManager):
         self.configurations_df = self.configurations_df[self.configuration_names]
 
     def generate_log_indicator(self):
+        """ Generates an indicator list for the 'log' attribute of hyperparameters in the configuration space.
+        """
         log_indicator = {}
-        for hp in self.configuration_space.get_hyperparameters():
-            if hasattr(hp, 'log'):
-                log_indicator[hp.name] = hp.log
+        for hparam in list(self.configuration_space.values()):
+            if hasattr(hparam, 'log'):
+                log_indicator[hparam.name] = hparam.log
             else:
-                log_indicator[hp.name] = False
+                log_indicator[hparam.name] = False
         self.log_indicator = [log_indicator[k] for k in self.configuration_names]
 
     def generate_categorical_indicator(self):
+        """ Generates an indicator list for the categorical hyperparameters in the configuration space.
+        """
         categorical_indicator = {}
         categories = {}
-        for hp in self.configuration_space.get_hyperparameters():
-            if isinstance(hp, CategoricalHyperparameter):
-                categorical_indicator[hp.name] = True
-                categories[hp.name] = hp.choices
+        for hparam in list(self.configuration_space.values()):
+            if isinstance(hparam, CategoricalHyperparameter):
+                categorical_indicator[hparam.name] = True
+                categories[hparam.name] = hparam.choices
             else:
-                categorical_indicator[hp.name] = False
-                categories[hp.name] = []
+                categorical_indicator[hparam.name] = False
+                categories[hparam.name] = []
         self.categorical_indicator = [categorical_indicator[k] for k in self.configuration_names]
         self.categories = [categories[k] for k in self.configuration_names]
 
-    def get_log_indicator(self):
+    def get_log_indicator(self) -> List[bool]:
+        """ Returns the log information of hyperparameters.
+        """
         return self.log_indicator
 
-    def get_categorical_indicator(self):
+    def get_categorical_indicator(self) -> Tuple[List[bool], List]:
+        """ Returns the categorical information of hyperparameters.
+        """
         return self.categorical_indicator, self.categories

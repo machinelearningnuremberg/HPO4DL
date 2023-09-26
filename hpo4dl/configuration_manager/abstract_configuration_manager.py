@@ -18,7 +18,8 @@ class AbstractConfigurationManager(ABC):
         num_configurations: int = 0,
         seed: Optional[int] = None
     ):
-        pass
+        """ Initialize configuration manager.
+        """
 
     @abstractmethod
     def get_configurations(self) -> pd.DataFrame:
@@ -31,7 +32,7 @@ class AbstractConfigurationManager(ABC):
         """
 
     @abstractmethod
-    def add_configurations(self, num_configurations: int, max_try_limit: int = 100) -> int:
+    def add_configurations(self, num_configurations: int, max_try_limit: int = 100):
         """ Adds a specified number of unique configurations to the list.
 
         Args:
@@ -42,7 +43,7 @@ class AbstractConfigurationManager(ABC):
             int: Number of configurations added.
         """
 
-    def set_configuration(self, configuration):
+    def set_configuration(self, configuration: Dict):
         """ Add the configuration to the list.
 
         Args:
@@ -50,11 +51,11 @@ class AbstractConfigurationManager(ABC):
         """
 
     @abstractmethod
-    def get_log_indicator(self):
+    def get_log_indicator(self) -> List[bool]:
         """ Get log indicator for configuration space.
         """
 
     @abstractmethod
-    def get_categorical_indicator(self) -> Tuple[List, Dict]:
+    def get_categorical_indicator(self) -> Tuple[List[bool], List]:
         """ Get categorical indicator for configuration space.
         """

@@ -2,9 +2,10 @@
 """
 
 from pathlib import Path
-import pandas as pd
 from typing import List, Dict
 import json
+import pandas as pd
+import ConfigSpace as CS
 
 
 class ResultLogger:
@@ -19,23 +20,29 @@ class ResultLogger:
         if configuration_space is not None:
             self.save_configuration_space(configuration_space=configuration_space)
 
-    def save_configuration_space(self, configuration_space):
+    def save_configuration_space(self, configuration_space: CS.ConfigurationSpace):
+        """ Save configuration space details as a json.
+
+        Args:
+            configuration_space: Hyperparameter space.
+
+        """
         hyperparameters = []
-        for hp in configuration_space.get_hyperparameters():
-            hp_dict = {
-                "name": hp.name,
-                "type": type(hp).__name__,
-                "default": hp.default_value,
-                "values": None if not hasattr(hp, "choices") else list(hp.choices),
-                "bounds": None if not hasattr(hp, "lower") else [hp.lower, hp.upper],
-                "log": None if not hasattr(hp, "log") else hp.log
+        for hparam in list(configuration_space.values()):
+            hparam_dict = {
+                "name": hparam.name,
+                "type": type(hparam).__name__,
+                "default": hparam.default_value,
+                "values": None if not hasattr(hparam, "choices") else list(hparam.choices),
+                "bounds": None if not hasattr(hparam, "lower") else [hparam.lower, hparam.upper],
+                "log": None if not hasattr(hparam, "log") else hparam.log
             }
-            hyperparameters.append(hp_dict)
+            hyperparameters.append(hparam_dict)
 
-        with open(self.root_path / 'configuration_space.json', 'w') as f:
-            json.dump(hyperparameters, f, indent=4)
+        with open(self.root_path / 'configuration_space.json', 'w') as file_handle:
+            json.dump(hyperparameters, file_handle, indent=4)
 
-    def add_configuration_results(self, configuration_results):
+    def add_configuration_results(self, configuration_results: List[Dict]):
         """ Add configuration results to result log.
 
         Args:

@@ -2,7 +2,6 @@ from typing import List, Dict
 from pathlib import Path
 import glob
 import os
-
 import torch.cuda
 import ConfigSpace as CS
 
@@ -19,11 +18,6 @@ class TimmObjective:
             storage_dir = '~/hpo4dl/data'
         self.storage_dir = Path(storage_dir)
 
-        # self.dataset = 'torch/inaturalist'
-        # self.data_dir = './data/inaturalist'
-        # self.train_split = "kingdom/train"
-        # self.val_split = "kingdom/validation"
-
     @property
     def configspace(self) -> CS.ConfigurationSpace:
         config_space = CS.ConfigurationSpace(seed=self.seed)
@@ -39,6 +33,7 @@ class TimmObjective:
         return config_space
 
     def objective_function(self, configuration: Dict, epoch: int, previous_epoch: int, checkpoint_path: str) -> List:
+        # checkpoint_path given in the format - storate_path / experiment_name / trial_id / checkpoint_name
         data_dir = str(self.storage_dir / 'data' / self.dataset)
         dataset_download = True
         use_amp = torch.cuda.is_available()
@@ -69,11 +64,11 @@ class TimmObjective:
             **configuration,
         )
 
-        # Normalize top-1 accuracy metric
+        # Normalize top-1 accuracy metric.
         for item in evaluated_metrics:
             item['metric'] /= 100
 
-        # Renaming 'last.pth.tar' to 'last'
+        # Renaming checkpoint name 'last.pth.tar' to 'last'
         old_name = Path(*path_parts[:-1]) / 'last.pth.tar'
         new_name = Path(*path_parts[:-1]) / path_parts[-1]
 
@@ -92,5 +87,6 @@ class TimmObjective:
             except OSError as ex:
                 print(f"Error: {file} : {ex.strerror}")
 
-        # return metric should be a dictionary with 'epoch' and 'metric'.
+        # return metric should be a list of dictionaries or a dictionary with 'epoch' and 'metric'.
+        # Metric should be normalized.
         return evaluated_metrics

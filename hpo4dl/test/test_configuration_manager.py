@@ -1,7 +1,7 @@
 import pytest
 import ConfigSpace as CS
 from unittest.mock import Mock
-from hpo4dl.configuration_manager import ConfigurationManager
+from hpo4dl.configuration_manager.configuration_manager import ConfigurationManager
 
 
 # Assuming your_module is the module where ConfigurationManager is

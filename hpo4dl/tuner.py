@@ -19,7 +19,7 @@ from hpo4dl.optimizers.abstract_optimizer import AbstractOptimizer
 from hpo4dl.optimizers.hyperband.hyperband import HyperBand
 from hpo4dl.optimizers.dyhpo.dyhpo_optimizer import DyHPOOptimizer
 from hpo4dl.utils.result_logger import ResultLogger
-from hpo4dl.utils.configuration_result import ConfigurationInfo
+from hpo4dl.utils.configuration_dataclasses import ConfigurationInfo
 
 
 class Tuner:
@@ -31,7 +31,7 @@ class Tuner:
 
     def __init__(
         self,
-        objective_function: Callable[[Dict, int, int, str], Union[List, int, float]],
+        objective_function: Callable[[Dict, int, int, str], Union[List[Dict], Dict]],
         configuration_space: CS.ConfigurationSpace,
         max_epochs: int,
         max_budget: Optional[int],
@@ -39,10 +39,30 @@ class Tuner:
         optimizer: Literal["hyperband", "dyhpo"] = 'dyhpo',
         minimize: bool = False,
         num_configurations: int = 1000,
-        seed: int = None,
-        device: str = None,
+        seed: Optional[int] = None,
+        device: Optional[str] = None,
         storage_path: Union[Path, str, None] = None,
     ):
+        """ Initialize tuner.
+
+        Args:
+            objective_function: Function to evaluate a configuration's performance.
+            configuration_space: Space of possible configurations for optimization.
+            max_epochs: Maximum number of epochs for optimization of objective function.
+            max_budget: Maximum budget for hyperparameter optimization surrogate in terms of epochs.
+                        Not required when using hyperband.
+            output_path: Path to store optimization results.
+            optimizer: Optimization strategy to use. Choices: 'hyperband' or 'dyhpo'.
+            minimize: If True, minimize the objective function, else maximize.
+            num_configurations: Total number of configurations to sample.
+            seed: Seed for reproducibility.
+            device: Hardware device for execution. ('cuda', 'cpu').
+            storage_path: Path to store temporary intermediate data.
+        """
+        assert optimizer in ["hyperband", "dyhpo"], "Only supported hyperband and dyhpo optimizers."
+        assert optimizer != "hyperband" and max_budget is not None and max_budget > 0, \
+            f"Max budget needs to be defined for {optimizer}."
+
         self.seed = seed
         self.device = device
         self.objective_function = objective_function
@@ -53,7 +73,7 @@ class Tuner:
         self.max_epochs = max_epochs
         self.current_optimizer_budget = 0
         self.num_configurations = num_configurations
-        self.best_configuration_info = {}
+        self.best_configuration_info: Dict = {}
         self.experiment_name = f'experiment_{datetime.now().strftime("%Y%m%d-%H%M%S")}'
         self.output_path = Path(output_path) / self.experiment_name
 
@@ -110,7 +130,7 @@ class Tuner:
 
         """
         while self.optimizer_max_budget is None or self.current_optimizer_budget < self.optimizer_max_budget:
-            surrogate_overhead_time = 0
+            surrogate_overhead_time = 0.0
 
             surrogate_start_time = time.perf_counter()
             configuration_indices, fidelities = self.surrogate.suggest()
@@ -118,7 +138,7 @@ class Tuner:
 
             surrogate_overhead_time += (surrogate_end_time - surrogate_start_time)
 
-            if configuration_indices is None:
+            if configuration_indices is None or fidelities is None:
                 break
 
             configuration_infos = []
