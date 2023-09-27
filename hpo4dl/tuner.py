@@ -60,7 +60,8 @@ class Tuner:
             storage_path: Path to store temporary intermediate data.
         """
         assert optimizer in ["hyperband", "dyhpo"], "Only supported hyperband and dyhpo optimizers."
-        assert optimizer != "hyperband" and max_budget is not None and max_budget > 0, \
+        assert optimizer == "hyperband" or \
+               (optimizer != "hyperband" and max_budget is not None and max_budget > 0), \
             f"Max budget needs to be defined for {optimizer}."
 
         self.seed = seed
