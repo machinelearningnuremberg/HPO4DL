@@ -21,7 +21,7 @@ def main():
                         help='validation split name (default: validation)')
     parser.add_argument('--seed', type=int, default=42,
                         help='random seed (default: 42)')
-    parser.add_argument('--optimizer', type=str, default='hyperband',
+    parser.add_argument('--optimizer', type=str, default='dyhpo',
                         help='optimizer name (default: dyhpo)')
     parser.add_argument('--max-epochs', type=int, default=27,
                         help='maximum epochs (default: 27)')

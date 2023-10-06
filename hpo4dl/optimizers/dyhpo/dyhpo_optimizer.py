@@ -91,7 +91,7 @@ class DyHPOOptimizer(AbstractOptimizer):
         self.configuration_manager: AbstractConfigurationManager = configuration_manager
 
         self.num_configurations: int = num_configurations
-        self.configuration_manager.add_configurations(num_configurations=self.num_configurations)
+        # self.configuration_manager.add_configurations(num_configurations=self.num_configurations)
 
         self.hp_candidates = self.configuration_manager.get_configurations()
         # self.hp_candidates = self.hp_candidates.to_numpy()
