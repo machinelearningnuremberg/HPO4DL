@@ -171,6 +171,8 @@ class Tuner:
 
             self.result_logger.add_configuration_results(configuration_results=configuration_results)
 
+            self.current_optimizer_budget += 1
+
         best_configuration_info = self.result_logger.get_best_configuration()
 
         # move best model checkpoint to result path
