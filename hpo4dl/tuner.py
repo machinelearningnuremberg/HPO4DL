@@ -195,7 +195,7 @@ class Tuner:
         """
         checkpoint_path = self.graybox_wrapper.get_checkpoint_path(configuration_id=configuration_id)
         if checkpoint_path.exists():
-            destination_file_path = self.output_path / 'checkpoints'
+            destination_file_path = self.output_path / 'best_trial'
             shutil.copytree(checkpoint_path, destination_file_path)
         else:
             warnings.warn("Best model checkpoint does not exist.", RuntimeWarning)
