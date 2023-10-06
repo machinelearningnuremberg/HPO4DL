@@ -1,7 +1,5 @@
 import sys
 import os
-import random
-import ConfigSpace as CS
 import argparse
 import json
 
@@ -29,32 +27,21 @@ def main():
                         help='maximum epochs (default: 27)')
     parser.add_argument('--max-budget', type=int, default=1000,
                         help='maximum budget in epochs (default: 1000)')
+    parser.add_argument('--num-config', type=int, default=1000,
+                        help='number of configurations (default: 1000)')
     args = parser.parse_args()
 
+    # Reset sys.argv to avoid conflicts with other argparse in timm training script.
     sys.argv = ['']
 
-    from dummy_objective import DummyObjective
+    # If using hpo4dl directly from the repository (instead of pip installation),
+    # add the parent directory to the Python path for correct imports.
+    # script_dir = os.path.dirname(os.path.abspath(__file__))
+    # parent_dir = os.path.dirname(script_dir)
+    # print(parent_dir)
+    # sys.path.append(parent_dir)
+
     from timm_objective import TimmObjective
-
-    # from pathlib import Path
-    # import pandas as pd
-    # import seaborn as sns
-    # import matplotlib.pyplot as plt
-    # files = ['dyhpo', 'hyperband']
-    # root_path = Path('./hpo4dl_results')
-    # result_data = {}
-    # metrics_data = pd.DataFrame()
-    # for f in files:
-    #     source_path = root_path / f / "hpo4dl_results.csv"
-    #     result_data[f] = pd.read_csv(source_path)
-    #     metrics_data[f] = result_data[f]['best_metric']
-    # sns.lineplot(metrics_data)
-    # plt.savefig("comparison.png", dpi=200)
-
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    parent_dir = os.path.dirname(script_dir)
-    print(parent_dir)
-    sys.path.append(parent_dir)
     from hpo4dl.tuner import Tuner
 
     storage_dir = os.path.expanduser(args.storage_dir)
@@ -65,7 +52,6 @@ def main():
         seed=args.seed,
         storage_dir=storage_dir,
     )
-    # objective_instance = DummyObjective(seed=args.seed)
 
     tuner = Tuner(
         objective_function=objective_instance.objective_function,
@@ -75,6 +61,7 @@ def main():
         optimizer=args.optimizer,
         seed=args.seed,
         max_epochs=args.max_epochs,
+        num_configurations=args.num_config,
         output_path=args.output_dir,
         storage_path=storage_dir,
     )

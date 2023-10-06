@@ -120,7 +120,7 @@ class GrayBoxWrapper(AbstractGrayBoxWrapper):
         Returns:
             Path: The checkpoint path.
         """
-        return self.checkpoint_path / f'trial_{configuration_id}' / 'last'
+        return self.checkpoint_path / f'trial_{configuration_id}'
 
     def close(self) -> None:
         """ Closes the wrapper and cleans up the checkpoint directory.

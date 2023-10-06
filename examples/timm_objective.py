@@ -33,16 +33,16 @@ class TimmObjective:
         return config_space
 
     def objective_function(self, configuration: Dict, epoch: int, previous_epoch: int, checkpoint_path: str) -> List:
-        # checkpoint_path given in the format - storate_path / experiment_name / trial_id / checkpoint_name
+        # checkpoint_path given in the format - storate_path / experiment_name / trial_id
         data_dir = str(self.storage_dir / 'data' / self.dataset)
         dataset_download = True
         use_amp = torch.cuda.is_available()
 
         checkpoint_path = Path(checkpoint_path)
         path_parts = checkpoint_path.parts
-        experiment_name = path_parts[-2]
-        output_checkpoint_path = Path(*path_parts[:-2])
-        resume_checkpoint_path = checkpoint_path if previous_epoch > 0 else ''
+        experiment_name = path_parts[-1]
+        output_checkpoint_path = Path(*path_parts[:-1])
+        resume_checkpoint_path = (checkpoint_path / "last.pth.tar") if previous_epoch > 0 else ''
 
         evaluated_metrics = train.main_with_args(
             dataset=self.dataset,
@@ -68,17 +68,8 @@ class TimmObjective:
         for item in evaluated_metrics:
             item['metric'] /= 100
 
-        # Renaming checkpoint name 'last.pth.tar' to 'last'
-        old_name = Path(*path_parts[:-1]) / 'last.pth.tar'
-        new_name = Path(*path_parts[:-1]) / path_parts[-1]
-
-        try:
-            os.rename(str(old_name), str(new_name))
-        except OSError as ex:
-            print(f"Error renaming {old_name} to {new_name}: {ex.strerror}")
-
         # remove extra checkpoint files made by timm script to save space.
-        trial_checkpoint_path = Path(*path_parts[:-1]) / 'checkpoint*'
+        trial_checkpoint_path = checkpoint_path / 'checkpoint*'
         files = glob.glob(str(trial_checkpoint_path))
 
         for file in files:

@@ -194,7 +194,6 @@ class Tuner:
 
         """
         checkpoint_path = self.graybox_wrapper.get_checkpoint_path(configuration_id=configuration_id)
-        checkpoint_path = checkpoint_path.parent
         if checkpoint_path.exists():
             destination_file_path = self.output_path / 'checkpoints'
             shutil.copytree(checkpoint_path, destination_file_path)
